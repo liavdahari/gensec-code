@@ -1,0 +1,33 @@
+# Virtual environments
+env/
+.env
+.venv/
+venv/
+
+# Vector databases and caches
+.chromadb/
+**/.chromadb/
+__pycache__/
+*.pyc
+*.py[cod]
+.chainlit/
+.files/
+
+# Operating system files
+.DS_Store
+Thumbs.db
+
+# Secrets & credentials
+credentials.json
+token.json
+*.key
+*.pem
+
+# IDEs
+.idea/
+.vscode/
+
+# Build artifacts
+build/
+dist/
+*.egg-info/

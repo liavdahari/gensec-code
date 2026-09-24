@@ -1,0 +1,20 @@
+[
+  {
+    "id": "SEC-001",
+    "title": "Indirect Prompt Injection in RAG Systems",
+    "author": "Liav Dahari",
+    "topic": "AI Security",
+    "tags": ["prompt-injection", "rag", "adversarial-attack"],
+    "date": "2026-09-23",
+    "content": "Indirect prompt injection occurs when untrusted external data (such as web pages, PDF documents, or user comments) loaded into a vector database contains hidden instructions designed to hijack the LLM prompt. When the retriever fetches this poisoned document snippet, the LLM executes the injected directive instead of following the system prompt. Defenses include input sanitization, delimiter isolation, context verification, and dual-LLM inspection."
+  },
+  {
+    "id": "SEC-002",
+    "title": "Vector Store Access Control and Multi-Tenancy",
+    "author": "Liav Dahari",
+    "topic": "System Security",
+    "tags": ["vector-database", "access-control", "multi-tenancy"],
+    "date": "2026-09-23",
+    "content": "Multi-tenant RAG systems must enforce cryptographic namespace isolation and role-based access control (RBAC) at the embedding and retrieval layers. Without strict metadata filtering on tenant IDs and permissions, an unprivileged user can craft semantic similarity queries that return sensitive chunks from unauthorized documents."
+  }
+]
