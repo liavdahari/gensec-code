@@ -26,3 +26,4 @@ langchain-chroma
 langchain-google-vertexai
 python-dotenv
 ddgs
+grandalf
