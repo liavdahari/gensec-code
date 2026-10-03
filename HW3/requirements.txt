@@ -19,3 +19,9 @@ langchain-anthropic
 httpx
 mypy_extensions
 IPython
+duckduckgo-search
+tabulate
+rich
+langchain-chroma
+langchain-google-vertexai
+python-dotenv
