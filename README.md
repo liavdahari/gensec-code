@@ -33,7 +33,35 @@ gensec-code/
         ├── docx/                 # Word documents
         ├── csv/                  # CSV spreadsheets
         └── md/                   # Markdown guides
+└── HW3/                          # Homework 3: LangGraph Multi-Agent System
+    ├── agent.py                  # Main CLI application & interactive REPL
+    ├── graph.py                  # Level 3 LangGraph Multi-Agent Architecture & HITL
+    ├── tools.py                  # Modular tool suite (Retained, Level 1, Level 2)
+    ├── test_agent.py             # Automated test suite (14 passing tests)
+    ├── agent_graph.png           # Mermaid architecture diagram
+    ├── HW.md                     # Homework 3 instructions
+    ├── README.md                 # Detailed HW3 documentation
+    ├── requirements.txt          # Python dependencies
+    ├── db_data/                  # SQLite reconnaissance databases
+    └── [01-08]_*.py              # Lab starter scripts (unmodified references)
 ```
+
+---
+
+## Homework 3: SecurAgent Multi-Agent LangGraph System
+
+SecurAgent coordinates specialized agents across AI security research, Azure AD database auditing, live web intelligence, and safe code execution:
+
+1. **Retained Tools:** `PythonREPLTool` and safe `terminal_tool` with timeout guards and safety filters.
+2. **Level 1 (Built-in Tools):** `DuckDuckGoSearchRun`, `WikipediaQueryRun`, and SQLite database querying.
+3. **Level 2 (Custom Tools with Pydantic):**
+   - `smartnotebook_rag_search`: Integrates HW2 `ResearchNoteLoader` and notes knowledge base with citations `[Source: filename]`.
+   - `database_security_audit`: Pydantic-validated scanner inspecting Azure AD `roadrecon.db` and MetaCTF `metactf_users.db`.
+   - `presidents_analyzer`: Analytical tool computing presidential longevity metrics from `presidents.py`.
+4. **Level 3 (Custom Architecture - LangGraph):** Stateful multi-agent graph with Supervisor orchestration, ToolNode execution, `MemorySaver` checkpointer, and Human-in-the-Loop review.
+5. **Testing & Quality:** 14 automated unit and integration tests passing in `test_agent.py`.
+
+See [HW3/README.md](file:///Users/liavdahari/Documents/FAU%20FALL%202026/COT4930-%20GENSEC/gensec-code/HW3/README.md) for full instructions and sample demonstrations.
 
 ---
 

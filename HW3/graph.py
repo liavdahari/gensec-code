@@ -64,12 +64,14 @@ def get_llm(tools: Optional[Sequence[BaseTool]] = None):
     """Instantiates the preferred chat model based on available environment variables.
 
     Supports Google GenAI, Vertex AI, OpenAI, and Anthropic with automatic detection.
-    Falls back gracefully if no remote API keys are configured.
+    Returns None if no live API keys or credentials are configured, triggering
+    the local deterministic simulation fallback.
     """
     google_api_key = os.getenv("GOOGLE_API_KEY") or os.getenv("GEMINI_API_KEY")
     openai_api_key = os.getenv("OPENAI_API_KEY")
     anthropic_api_key = os.getenv("ANTHROPIC_API_KEY")
-    gcp_project = os.getenv("GOOGLE_CLOUD_PROJECT", "gensec-liav-dahari")
+    google_creds = os.getenv("GOOGLE_APPLICATION_CREDENTIALS")
+    gcp_project = os.getenv("GOOGLE_CLOUD_PROJECT")
 
     llm = None
 
@@ -87,7 +89,7 @@ def get_llm(tools: Optional[Sequence[BaseTool]] = None):
         except Exception:
             pass
 
-    if llm is None and (os.getenv("GOOGLE_APPLICATION_CREDENTIALS") or gcp_project):
+    if llm is None and google_creds and os.path.exists(google_creds) and gcp_project:
         try:
             from langchain_google_vertexai import ChatVertexAI, HarmBlockThreshold, HarmCategory
             llm = ChatVertexAI(
@@ -112,14 +114,6 @@ def get_llm(tools: Optional[Sequence[BaseTool]] = None):
         try:
             from langchain_anthropic import ChatAnthropic
             llm = ChatAnthropic(model=os.getenv("ANTHROPIC_MODEL", "claude-3-5-sonnet-20241022"))
-        except Exception:
-            pass
-
-    if llm is None:
-        # Fallback to local default ChatGoogleGenerativeAI without explicit key
-        try:
-            from langchain_google_genai import ChatGoogleGenerativeAI
-            llm = ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_MODEL", "gemini-2.5-flash"))
         except Exception:
             pass
 
