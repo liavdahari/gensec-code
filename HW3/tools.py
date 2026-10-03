@@ -416,16 +416,16 @@ def database_security_audit(target_database: str = "roadrecon.db", audit_focus: 
         elif target_database == "roadrecon.db":
             if audit_focus == "privileged_roles":
                 cursor.execute("""
-                    SELECT r.displayName, count(m.roleId) as members_count 
+                    SELECT r.displayName, count(m.User) as members_count 
                     FROM DirectoryRoles r
-                    LEFT JOIN lnk_role_member_user m ON r.id = m.roleId
-                    GROUP BY r.id
+                    LEFT JOIN lnk_role_member_user m ON r.objectId = m.DirectoryRole
+                    GROUP BY r.objectId
                     ORDER BY members_count DESC
                     LIMIT ?;
                 """, (max_findings,))
                 role_rows = cursor.fetchall()
                 for role_name, member_count in role_rows:
-                    is_critical = "admin" in role_name.lower()
+                    is_critical = "admin" in (role_name or "").lower()
                     findings.append({
                         "directory_role": role_name,
                         "assigned_users_count": member_count,
