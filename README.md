@@ -39,6 +39,7 @@ gensec-code/
     ├── tools.py                  # Modular tool suite (Retained, Level 1, Level 2)
     ├── test_agent.py             # Automated test suite (14 passing tests)
     ├── agent_graph.png           # Mermaid architecture diagram
+    ├── hw3-Z23815316.docx        # Assignment submission document
     ├── HW.md                     # Homework 3 instructions
     ├── README.md                 # Detailed HW3 documentation
     ├── requirements.txt          # Python dependencies

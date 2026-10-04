@@ -83,6 +83,7 @@ HW3/
 ├── agent.py                   # Main CLI application & interactive REPL
 ├── test_agent.py              # Automated test suite (14 passing tests)
 ├── agent_graph.png            # Mermaid-generated architecture diagram
+├── hw3-Z23815316.docx         # Assignment submission document
 ├── presidents.py              # Starter presidential dataset (unmodified)
 ├── db_data/                   # SQLite database storage (unmodified)
 │   ├── metactf_users.db       # CTF users database with PBKDF2 hashes
