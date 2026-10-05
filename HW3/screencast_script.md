@@ -1,204 +1,182 @@
-# SecurAgent: Video Screencast Presentation Script
-**Course:** COT4930 - Security (System) Engineering with Generative AI (FAU)  
+# Homework 3 Video Screencast Script
+
 **Student:** Liav Dahari (FAU ID: Z23815316)  
-**Assignment:** Homework 3 - LangChain & LangGraph Multi-Agent System  
-**Estimated Video Duration:** 4 - 6 minutes  
+**Course:** COT4930 - Generative AI Security (Florida Atlantic University)  
+**Assignment:** Homework 3 - LangChain & LangGraph Multi-Agent System (SecurAgent)  
 
 ---
 
-## Pre-Recording Checklist & Setup
+## Pre-Recording Checklist
 
-1. **Terminal Ready:** Open your terminal in the repository root directory (`gensec-code/`).
-2. **Virtual Environment Active:**
+1. Open your terminal in the project root: `/Users/liavdahari/Documents/FAU FALL 2026/COT4930- GENSEC/gensec-code`
+2. Activate your virtual environment:
    ```bash
    source .venv/bin/activate
    ```
-3. **VS Code / IDE Ready:** Have the following files open in tabs so you can quickly switch between them:
+3. Have these tabs open in VS Code ready to click:
    - `HW3/tools.py`
    - `HW3/graph.py`
-   - `HW3/agent.py`
    - `HW3/agent_graph.png`
-   - `HW3/test_agent.py`
-   - `HW3/README.md`
-4. **Clean Terminal Screen:** Run `clear`.
+   - `HW3/agent.py`
+4. Keep a terminal window open next to VS Code for the live demo.
 
 ---
 
-## Video Timeline & Script
+## Presentation Script
+
+### 1. Introduction
+
+Hi everyone, my name is Liav Dahari, FAU ID Z23815316. This is my presentation for Homework 3 in Generative AI Security.
+
+For this assignment, our goal was to build our own custom LangChain agent by taking what we learned in our lab exercises and augmenting it with additional tools and architectures.
+
+In Homework 2, we built a standalone RAG application that could read documents. But a regular LLM or RAG pipeline can't run shell commands, can't write code, and can't make decisions on its own. An agent fixes that by giving the language model tools and a reasoning loop so it can decide which tools to call, inspect the results, and solve complex multi-step problems.
+
+For this project, I created **SecurAgent**, which tackles all three levels of difficulty from the homework prompt:
+1. First, it retains **both** the Python REPL and a safe Terminal shell tool.
+2. Second, for **Level 1**, it adds built-in tools like live DuckDuckGo web search, Wikipedia, and SQLite database querying.
+3. Third, for **Level 2**, it implements custom tools with Pydantic validation—specifically integrating our **Homework 2 SmartNotebook RAG system** with strict in-line citations, and an Azure Active Directory security audit tool.
+4. And fourth, for **Level 3**, it uses a stateful **Multi-Agent LangGraph architecture** with a supervisor orchestrator, human-in-the-loop review, and memory checkpointing.
+
+All of our original starter lab scripts (01 through 08 and presidents.py) were kept completely untouched as pristine references, and our dependencies are isolated using the `uv` virtual environment manager.
+
+Now, let's walk through the code.
 
 ---
 
-### Segment 1: Introduction & Assignment Goals (0:00 - 0:45)
+### 2. Code Walkthrough: Tool Suite (`tools.py`)
 
-**[Visual: Show `HW3/README.md` or repository structure in VS Code]**
+	1	Click on the tab for tools.py.
+	2	Highlight Line 78: python_repl_tool = PythonREPLTool()
+	3	Scroll to Line 81 (class TerminalCommandInput) and Line 93 (validate_safe_command).
+	4	Highlight Line 109: @tool("terminal_tool", args_schema=TerminalCommandInput)
 
-**Spoken Script:**
-> *"Hello everyone and welcome! My name is **Liav Dahari** (FAU ID: Z23815316), and this is my video presentation for **Homework 3** in **COT4930: Generative AI Security** at Florida Atlantic University.*
->
-> *For this assignment, based on our lab exercises, we were tasked with building a custom LangChain agent by augmenting the starter code with additional tools or architectures.*
->
-> *Rather than stopping at the minimum requirements, I designed **SecurAgent**—a comprehensive system that satisfies all three difficulty tiers in the prompt:*
-> 1. *It retains both the **PythonREPL** and a secured **Terminal tool**;*
-> 2. *It adds **Level 1 built-in tools** like live DuckDuckGo web search, Wikipedia, and SQLite database querying;*
-> 3. *It implements **Level 2 custom tools with Pydantic validation**, specifically integrating my **Homework 2 SmartNotebook RAG application** with strict in-line citations, as well as an Azure Active Directory security audit tool;*
-> 4. *And for **Level 3**, it implements a stateful **Multi-Agent LangGraph architecture** featuring supervisor routing, memory checkpointing, and human-in-the-loop review.*
->
-> *All original starter lab scripts (01 through 08 and presidents.py) were kept completely untouched as pristine baselines, with project dependencies isolated using the `uv` virtual environment manager.*
->
-> *Let’s dive into the code!"*
+Starting in `tools.py`, the assignment requires retaining either the PythonREPL or the Terminal tool. SecurAgent retains both:
+- Right here at line 78, we instantiate `python_repl_tool` from `langchain_experimental`, allowing our agent to run Python code for math and data processing.
+- Then down at line 81 and 109 is our `terminal_tool`. Since running arbitrary shell commands is a major security risk, I added safety engineering using Pydantic: `TerminalCommandInput` sets an execution timeout, and at line 93, `validate_safe_command` uses regex patterns to block dangerous commands like `rm -rf /` or fork bombs before they can ever execute.
 
 ---
 
-### Segment 2: Code Walkthrough - Tool Suite & Retained Tools (0:45 - 2:00)
+	1	Scroll down to Line 139: web_search_tool = DuckDuckGoSearchRun(...)
+	2	Scroll to Line 152: wikipedia_tool = WikipediaQueryRun(...)
+	3	Scroll to Line 165: class SQLQueryInput and Line 190: query_sqlite_database.
 
-**[Visual: Switch to `HW3/tools.py` and scroll down as you discuss]**
-
-#### 1. Retained Tools (`tools.py`, lines 75 - 135)
-**[Highlight: `python_repl_tool` and `execute_command`]**
-
-**Spoken Script:**
-> *"Starting in `HW3/tools.py`, the assignment requires retaining either the PythonREPL or the Terminal tool. SecurAgent retains **both**:*
-> - *Here on line 78 is `python_repl_tool` from `langchain_experimental`, allowing the agent to evaluate Python expressions and perform numerical analysis.*
-> - *Directly below it, starting on line 81, is our retained `terminal_tool` (`execute_command`). Notice that we added safety engineering: a Pydantic `TerminalCommandInput` validator that enforces an execution timeout and uses regex guards to block dangerous patterns like `rm -rf /` or fork bombs before they can run."*
-
-#### 2. Level 1 - Additional Built-in Tools (`tools.py`, lines 137 - 220)
-**[Highlight: `web_search_tool`, `wikipedia_tool`, and `query_sqlite_database`]**
-
-**Spoken Script:**
-> *"Next, for **Level 1**, we added support for built-in tools not found in the lab exercises:*
-> - *On line 139 is `duckduckgo_search` (`DuckDuckGoSearchRun`), providing real-time web search capabilities without needing any third-party API keys.*
-> - *On line 151 is `wikipedia_search`, allowing the agent to pull factual and academic summaries.*
-> - *And on line 165 is `sql_db_query` (`query_sqlite_database`), which uses Pydantic validation to execute read-only SELECT and PRAGMA statements strictly against SQLite databases in our `db_data` directory."*
-
-#### 3. Level 2 - Custom Tools with Pydantic Validation (`tools.py`, lines 222 - 540)
-**[Highlight: `smartnotebook_rag_search` and `database_security_audit`]**
-
-**Spoken Script:**
-> *"For **Level 2**, we implemented custom tools:*
-> - *First, on line 242 is `smartnotebook_rag_search`. As suggested in the assignment, this directly imports and utilizes my **Homework 2 RAG application**. It dynamically imports `ResearchNoteLoader` from `HW2/notebook_loader.py` to ingest markdown research notes and JSON datasets from `HW2/rag_data/notes/`, performing keyword and semantic token relevance retrieval and strictly appending verified bracketed citations—`[Source: filename]`—to every retrieved context passage.*
-> - *Second, on line 363 is `database_security_audit`. This is a custom Pydantic-validated security tool designed for this course. It audits our two SQLite datasets: scanning `metactf_users.db` for password hash algorithms like PBKDF2-SHA256, and analyzing `roadrecon.db`—an Azure Active Directory tenant reconstruction database—to detect critical privilege tiers like Global Administrators and Application Administrators.*
-> - *Third, on line 498 is `presidents_analyzer`, which parses the presidential dataset from `presidents.py` to compute longevity metrics, terms, and average ages."*
+Next, for Level 1, we added built-in tools not contained in the lab exercises:
+- At line 139 is `duckduckgo_search`, which gives our agent live internet search capabilities without needing any API keys.
+- At line 152 is `wikipedia_search` for encyclopedic lookups.
+- And down at line 165 and 190 is `sql_db_query`. It uses Pydantic validation to ensure the agent can only run read-only SELECT queries strictly against our local SQLite databases.
 
 ---
 
-### Segment 3: Code Walkthrough - LangGraph Architecture (2:00 - 3:00)
+	1	Scroll down to Line 224: class SmartNotebookRAGInput(BaseModel):
+	2	Highlight Line 242: def smartnotebook_rag_search(...)
+	3	Scroll down to Line 333: class SecurityAuditInput(BaseModel):
+	4	Highlight Line 363: def database_security_audit(...)
+	5	Scroll to Line 486: def analyze_presidents_data(...)
 
-**[Visual: Switch to `HW3/graph.py` and show `agent_graph.png`]**
-
-**Spoken Script:**
-> *"Now let's examine **Level 3: the custom LangGraph architecture** in `HW3/graph.py`.*
->
-> *Here on screen is `HW3/agent_graph.png`, generated directly by our code.*
->
-> *Our state graph is defined around `MultiAgentState`, which extends LangGraph's `MessagesState`. It features:*
-> 1. *A **Supervisor Node** (line 144): acting as the orchestrator. It inspects incoming user queries and delegates work to the tool node or synthesizes the final response.*
-> 2. *A **Prebuilt ToolNode** (line 197): registered with all 8 of our domain tools.*
-> 3. *A **Human Review Node** (`human_review`, line 192): inspired by lab exercise 07. Through conditional routing in `route_supervisor` (line 204), when Human-in-the-Loop mode is active, any sensitive terminal or Python REPL command triggers an execution pause before execution, requiring human verification `[y/N]` or feedback before continuing.*
-> 4. *A `MemorySaver` checkpointer (line 280), ensuring conversations maintain persistent state across turns.*
->
-> *Notice also that in `get_llm()` (line 65), credentials are never hardcoded. It dynamically checks for Google Gemini, Vertex AI, OpenAI, or Anthropic, and provides a deterministic simulation fallback so the system can run offline smoothly."*
+Now let's look at Level 2, which are our custom tools:
+- Here at line 242 is `smartnotebook_rag_search`. As suggested in the assignment, this directly connects to my **Homework 2 RAG project**. It imports our custom `ResearchNoteLoader` from Homework 2 to read through our AI security notes and datasets. It scores document relevance and forces the output to attach verified citations in brackets, like `[Source: filename]`, so we maintain strict grounding.
+- Down at line 363 is `database_security_audit`. This is a security-focused tool tailored to our course. It scans `metactf_users.db` for password hashes like PBKDF2-SHA256, and inspects `roadrecon.db`—an Azure Active Directory reconnaissance database—to identify high-privilege roles like Global Administrators.
+- And at line 486 is `presidents_analyzer`, which parses our presidential dataset from `presidents.py` to calculate longevity metrics and term lengths.
 
 ---
 
-### Segment 4: Live Demonstration (3:00 - 4:45)
+### 3. Code Walkthrough: LangGraph Architecture (`graph.py`)
 
-**[Visual: Switch to Terminal]**
+	1	Click on the tab for graph.py.
+	2	Highlight Line 134: class MultiAgentState(MessagesState):
+	3	Scroll to Line 155: def supervisor_node(state: MultiAgentState):
+	4	Scroll down to Line 208: def human_review_node and Line 220: def route_supervisor
+	5	Scroll down to Line 261: def build_agent_graph and Line 297 (checkpointer=MemorySaver())
+	6	Click on the tab for agent_graph.png to show the diagram.
 
-#### Test 1: Run the Automated Test Suite
-**Command:**
+Now let's examine Level 3, which is our custom LangGraph architecture in `graph.py`.
+
+Here on screen is `agent_graph.png`, which was generated directly by our code:
+- At line 134, we define `MultiAgentState`, which extends LangGraph's `MessagesState` so the conversation history and tool outputs are preserved.
+- At line 155 is our **Supervisor Node**. This acts as the brain and orchestrator. It looks at the user's prompt, decides which tool needs to be called, and directs traffic.
+- Down at line 208 and 220, we implemented a **Human-in-the-Loop review node** inspired by lab exercise 07. If human-review mode is turned on, whenever the agent wants to run a shell command or Python code, execution pauses at `human_review` so the user can approve it with 'y' or provide feedback to change it.
+- Down at line 297, we compile the graph with `MemorySaver()`, giving our agent session memory across turns.
+- Also, in `get_llm()` at line 65, API keys are never hardcoded—they are read from environment variables, with a deterministic simulation fallback so the system runs smoothly offline.
+
+---
+
+### 4. Live Demonstration (Terminal)
+
+	1	Switch to your Terminal window.
+	2	Make sure .venv is active.
+
+Now let's jump into the terminal and see SecurAgent in action!
+
+#### Step 1: Run the Test Suite
+**Type and run:**
 ```bash
 python -m unittest HW3/test_agent.py
 ```
-**Spoken Script:**
-> *"Now let's see SecurAgent in action! First, let's run our automated test suite in `HW3/test_agent.py`.*
-> *[Run command]*
-> *Notice that all 14 tests pass in approximately 0.2 seconds! This verifies our Python REPL, terminal safety filters, SQLite queries, HW2 RAG citation generation, Pydantic validations, and LangGraph workflow compilation."*
+> *"First, let's run our automated test suite in `HW3/test_agent.py`.*
+> *As you can see, all 14 tests pass in around 0.2 seconds! This tests everything: the Python REPL, terminal safety filters, SQLite queries, HW2 RAG citations, Pydantic validation, and LangGraph graph compilation."*
 
-#### Test 2: Architecture Graph Export
-**Command:**
+---
+
+#### Step 2: Show Architecture Graph
+**Type and run:**
 ```bash
 python HW3/agent.py --draw
 ```
-**Spoken Script:**
 > *"Next, let's run `python HW3/agent.py --draw`.*
-> *[Run command]*
-> *This exports `agent_graph.png` and prints the ASCII topology directly to the terminal, showing the entry point, supervisor orchestrator, conditional human review edge, and tool node."*
-
-#### Test 3: Demo Custom HW2 SmartNotebook RAG Tool
-**Command:**
-```bash
-python HW3/agent.py -q "Summarize the key security principles in RAG from my notes"
-```
-**Spoken Script:**
-> *"Now let's test our Level 2 custom RAG tool utilizing Homework 2.*
-> *[Run command]*
-> *Notice the rich formatted output! The agent routes the query through the graph to `smartnotebook_rag_search`. It reads from `ai_security_brief.md` in my HW2 notes and retrieves key security principles: Context Grounding, Access Control, Throttled Ingestion, and Hybrid Retrieval—complete with verified `[Source: ai_security_brief.md]` citations."*
-
-#### Test 4: Demo Database Security Audit Tool
-**Command:**
-```bash
-python HW3/agent.py -q "Perform a security audit on roadrecon.db"
-```
-**Spoken Script:**
-> *"Next, let's test our custom security audit tool on the Azure Active Directory reconnaissance database `roadrecon.db`.*
-> *[Run command]*
-> *Here, SecurAgent audits the database, discovers 2 users assigned to the CRITICAL 'Global Administrator' directory role, and flags an 'Application Administrator' role, returning a structured JSON security report."*
-
-#### Test 5: Demo Presidential Longevity Analyzer
-**Command:**
-```bash
-python HW3/agent.py -q "Analyze the age of US presidents when leaving office"
-```
-**Spoken Script:**
-> *"Let's test our custom presidential analyzer:*
-> *[Run command]*
-> *SecurAgent analyzes all 45 presidents from `presidents.py`, calculating an average age of 60.78 years, with Joe Biden as the oldest at term end (age 82) and John F. Kennedy as the youngest (age 46)."*
-
-#### Test 6: Demo Interactive Human-in-the-Loop (HITL) Mode
-**Command:**
-```bash
-python HW3/agent.py --hitl
-```
-*(When prompt appears: type `exit`)*
-**Spoken Script:**
-> *"Finally, when running in interactive mode with `--hitl`, SecurAgent launches our rich terminal REPL. In this mode, any time a terminal or shell tool is scheduled, execution interrupts and prompts the user: 'Approve execution? [y/N] or type feedback', giving full control to the human reviewer before code execution."*
+> *This exports our graph image and prints the ASCII topology right in the terminal, showing our entry point, the supervisor node, the human-review conditional edge, and the tool node."*
 
 ---
 
-### Segment 5: Conclusion & Wrap-Up (4:45 - 5:15)
-
-**[Visual: Switch back to VS Code showing Git log / commit history or `HW3/README.md`]**
-
-**Spoken Script:**
-> *"To wrap up:*
-> - *We developed our code incrementally with frequent, well-structured git commits;*
-> - *Documented every function with complete Python docstrings;*
-> - *Isolated dependencies using `uv`;*
-> - *Enforced zero hardcoded API keys;*
-> - *And created full documentation in `HW3/README.md` and `hw3-Z23815316.docx`.*
->
-> *Thank you very much for watching! All code and commit history are pushed and available in my GitHub repository."*
+#### Step 3: Query Custom HW2 RAG Knowledge Base
+**Type and run:**
+```bash
+python HW3/agent.py -q "Summarize the key security principles in RAG from my notes"
+```
+> *"Now let's test our custom Level 2 RAG tool connected to Homework 2.*
+> *Look at the formatted response! SecurAgent routed the query to `smartnotebook_rag_search`. It pulled the key principles from my notes in `ai_security_brief.md`—like context grounding, access control, and batch ingestion—and attached our verified source citations: `[Source: ai_security_brief.md]`."*
 
 ---
 
-## Quick Reference: Commands Used in Video
-
+#### Step 4: Run Azure AD Security Audit
+**Type and run:**
 ```bash
-# 1. Run test suite
-python -m unittest HW3/test_agent.py
-
-# 2. Export & display graph topology
-python HW3/agent.py --draw
-
-# 3. HW2 Custom RAG Demo
-python HW3/agent.py -q "Summarize the key security principles in RAG from my notes"
-
-# 4. Azure AD Database Security Audit Demo
 python HW3/agent.py -q "Perform a security audit on roadrecon.db"
+```
+> *"Next, let's test our security audit tool on the Azure AD database `roadrecon.db`.*
+> *Here, SecurAgent audited the database, flagged 2 users assigned to the critical Global Administrator role, identified Application Administrators, and gave us a structured security report."*
 
-# 5. Presidential Longevity Analysis Demo
+---
+
+#### Step 5: Run Presidential Longevity Analysis
+**Type and run:**
+```bash
 python HW3/agent.py -q "Analyze the age of US presidents when leaving office"
+```
+> *"Next, we'll run our presidential data analyzer.*
+> *It analyzed all 45 presidents from `presidents.py` and calculated that the average age upon leaving office is 60.78 years, with Joe Biden as the oldest at age 82 and John F. Kennedy as the youngest at age 46."*
 
-# 6. Launch Human-in-the-Loop Interactive REPL
+---
+
+#### Step 6: Interactive Human-in-the-Loop Mode
+**Type and run:**
+```bash
 python HW3/agent.py --hitl
 ```
+*(When the banner appears, type `exit` and press Enter)*
+> *"Finally, if we launch SecurAgent with `--hitl`, it starts our interactive REPL. In this mode, whenever the agent attempts to run a terminal command or Python code, it halts and asks the user to approve execution with 'y' or provide feedback, giving the human reviewer full control."*
+
+---
+
+### 5. Conclusion
+
+	1	Switch back to VS Code showing HW3/README.md or git log in terminal.
+
+To wrap up:
+- We developed SecurAgent incrementally with clean, frequent git commits;
+- Added docstrings to all functions and classes;
+- Used `uv` to isolate our environment;
+- Ensured zero hardcoded secrets;
+- And created full documentation in `README.md` and our submission document `hw3-Z23815316.docx`.
+
+Thank you for watching! All of my code and commit history are pushed and available on my GitHub repository.
