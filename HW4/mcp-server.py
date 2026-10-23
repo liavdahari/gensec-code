@@ -96,7 +96,7 @@ def identify_hash_type(hash_string: str) -> dict:
             "type": "SHA-256",
             "status": "STANDARD (Secure for integrity, requires salt for passwords)",
         }
-    elif h.startswith("$2") and len(h) == 60:
+    elif re.match(r"^\$2[aby]?\$\d{2}\$[./A-Za-z0-9]{20,}", h):
         return {
             "hash": h,
             "type": "bcrypt",
