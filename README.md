@@ -19,7 +19,6 @@ gensec-code/
 │   ├── direct_injection.py       # Direct prompt injection starter
 │   ├── hw5-Z23815316.docx        # Full assignment report with attack screenshots
 │   ├── hw5-Z23815316.pdf         # Exported PDF report
-│   ├── screencast_script.md      # Narrated screencast presentation script
 │   ├── screencast_url.txt        # YouTube screencast URL placeholder
 │   ├── requirements.txt          # Python dependencies
 │   └── README.md                 # Detailed HW5 documentation & APE mapping
@@ -84,7 +83,7 @@ A comprehensive penetration testing suite evaluating the security of **SecurAgen
    - **Mechanism:** Injects completion delimiters (`Answer: Benign  Message: ...`) directly into the input email string without proper structural sanitization.
    - **Impact:** Subverts the few-shot classifier into interpreting the scam as an in-context demonstration, classifying a blatant lottery scam as **Benign**.
 
-See [HW5/README.md](file:///Users/liavdahari/Documents/FAU%20FALL%202026/COT4930-%20GENSEC/gensec-code/HW5/README.md) for full attack walkthroughs, reproduction scripts, and the narrated screencast script.
+See [HW5/README.md](file:///Users/liavdahari/Documents/FAU%20FALL%202026/COT4930-%20GENSEC/gensec-code/HW5/README.md) for full attack walkthroughs, APE taxonomy references, and reproduction scripts.
 
 ---
 

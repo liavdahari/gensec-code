@@ -138,7 +138,6 @@ python3 HW5/run_pentest.py --all
 
 ## Screencast & Submission Artifacts
 
-- **Screencast Script:** Refer to `HW5/screencast_script.md` for a 4-5 minute narrated presentation walkthrough.
 - **Submission Word Document:** `HW5/hw5-Z23815316.docx` contains all formatted headings, prompts, tool outputs, impacts, and screenshot placeholders with student FAU ID callouts.
 - **Submission PDF:** `HW5/hw5-Z23815316.pdf`.
 - **Recording URL:** Saved in `HW5/screencast_url.txt`.

@@ -33,3 +33,6 @@ token.json
 build/
 dist/
 *.egg-info/
+
+# Local submission notes & scripts
+HW5/screencast_script.md
