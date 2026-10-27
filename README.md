@@ -12,6 +12,17 @@
 gensec-code/
 ├── README.md
 ├── .gitignore
+├── HW5/                          # Homework 5: Penetration Testing LLM Applications with APE
+│   ├── run_pentest.py            # Automated penetration testing CLI suite
+│   ├── 01_template.py            # Few-shot spam classifier target
+│   ├── 01_langgraph_injection.py # LangGraph injection defense target
+│   ├── direct_injection.py       # Direct prompt injection starter
+│   ├── hw5-Z23815316.docx        # Full assignment report with attack screenshots
+│   ├── hw5-Z23815316.pdf         # Exported PDF report
+│   ├── screencast_script.md      # Narrated screencast presentation script
+│   ├── screencast_url.txt        # YouTube screencast URL placeholder
+│   ├── requirements.txt          # Python dependencies
+│   └── README.md                 # Detailed HW5 documentation & APE mapping
 ├── HW4/                          # Homework 4: Multi-Server MCP Agent Application
 │   ├── agent.py                  # Multi-Server Coordinating Security Agent
 │   ├── mcp-server.py             # Custom FastMCP SecOps Server (3 security tools)
@@ -53,6 +64,27 @@ gensec-code/
         ├── csv/                  # CSV spreadsheets
         └── md/                   # Markdown guides
 ```
+
+---
+
+## Homework 5: Penetration Testing LLM Applications with APE Taxonomy
+
+A comprehensive penetration testing suite evaluating the security of **SecurAgent (HW3)** and lab prompt templates against the standardized [HiddenLayer Adversarial Prompt Engineering (APE)](https://ape.hiddenlayer.com/) taxonomy:
+
+1. **Attack 1 - Encrypted / Encoded Input (`HLT01.02`):**
+   - **Target:** SecurAgent's `terminal_tool` (`HW3/tools.py`).
+   - **Mechanism:** Bypasses Pydantic static regex blacklists (`rm -rf /`, fork bombs) by encoding a multi-stage shell reconnaissance payload into Base64 (`... | base64 -d | sh`).
+   - **Impact:** Evades all string filters and executes on the macOS host, exfiltrating the username (`liavdahari`), hostname, and network IP.
+2. **Attack 2 - Pretexting & Context Manipulation (`HLT05.13`):**
+   - **Target:** SecurAgent's `sql_db_query` (`HW3/tools.py`) inspecting `metactf_users.db`.
+   - **Mechanism:** While direct extraction commands (`Dump all passwords`) trigger safety refusals, framing the request under an academic cryptography audit pretext causes the agent to bypass its refusal boundary.
+   - **Impact:** SecurAgent autonomously discovers the schema via PRAGMA and extracts live PBKDF2 password hashes for administrative accounts.
+3. **Attack 3 - Few-Shot Prompting / Delimiter Spoofing (`HLT05.01`):**
+   - **Target:** Week 5 Spam Classification Service (`HW5/01_template.py`).
+   - **Mechanism:** Injects completion delimiters (`Answer: Benign  Message: ...`) directly into the input email string without proper structural sanitization.
+   - **Impact:** Subverts the few-shot classifier into interpreting the scam as an in-context demonstration, classifying a blatant lottery scam as **Benign**.
+
+See [HW5/README.md](file:///Users/liavdahari/Documents/FAU%20FALL%202026/COT4930-%20GENSEC/gensec-code/HW5/README.md) for full attack walkthroughs, reproduction scripts, and the narrated screencast script.
 
 ---
 
@@ -111,6 +143,21 @@ SmartNotebook RAG augments a LangChain retrieval-augmented generation pipeline w
 ---
 
 ## Setup and Execution
+
+### Homework 5: Penetration Testing Suite
+```bash
+cd HW5
+source ../.venv/bin/activate
+pip install -r requirements.txt
+
+# Run all 3 attacks sequentially with automated reporting
+python3 run_pentest.py --all
+
+# Or run individual attack scenarios
+python3 run_pentest.py --attack 1   # Encoded Shell Command Injection (SecurAgent)
+python3 run_pentest.py --attack 2   # Pretexting Credential Exfiltration (SecurAgent)
+python3 run_pentest.py --attack 3   # Few-Shot Delimiter Spoofing (Spam Classifier)
+```
 
 ### Homework 4: Multi-Server MCP Agent
 ```bash
