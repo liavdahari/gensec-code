@@ -1,10 +1,17 @@
 import os
 import readline
+from pathlib import Path
+from dotenv import load_dotenv
+
+_CURRENT_DIR = Path(__file__).resolve().parent
+load_dotenv(_CURRENT_DIR / ".env")
+load_dotenv(_CURRENT_DIR.parent / ".env")
+
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 # Configure the default chat model from the environment.
-llm = ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_MODEL"))
+llm = ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_MODEL", "gemini-3.5-flash-lite"))
 #from langchain_openai import ChatOpenAI
 #llm = ChatOpenAI(model=os.getenv("OPENAI_MODEL"))
 #from langchain_anthropic import ChatAnthropic
@@ -36,15 +43,19 @@ spam_detect_prompt = PromptTemplate(
 
 print("Welcome to my spam detector.  Type an e-mail subject line and I will tell you if it is benign or malicious.  A blank line exits.")
 while True:
-    line = input("llm>> ")
+    try:
+        line = input("llm>> ")
+    except (EOFError, KeyboardInterrupt):
+        break
     if line:
         # Fill in the user's message, send it to the model, and print the label.
         result = llm.invoke(spam_detect_prompt.format(message=line))
 
-        # original code used just result.content, but the new version of the LLM returns a list
-        # of dicts with a 'text' key:
-        # original:
-        #      print(result.content)
-        print(result.content[0]['text'])
+        if isinstance(result.content, list) and len(result.content) > 0 and isinstance(result.content[0], dict):
+            print(result.content[0].get('text', '').strip())
+        elif isinstance(result.content, str):
+            print(result.content.strip())
+        else:
+            print(str(result.content).strip())
     else:
         break

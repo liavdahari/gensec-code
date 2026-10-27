@@ -1,11 +1,18 @@
 import os
 import readline
 from typing import TypedDict, Literal
+from pathlib import Path
+
+# Load environment variables
+from dotenv import load_dotenv
+_CURRENT_DIR = Path(__file__).resolve().parent
+load_dotenv(_CURRENT_DIR / ".env")
+load_dotenv(_CURRENT_DIR.parent / ".env")
 
 from langgraph.graph import StateGraph, START, END
 from langchain_core.prompts import PromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
-llm = ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_MODEL"))
+llm = ChatGoogleGenerativeAI(model=os.getenv("GOOGLE_MODEL", "gemini-3.5-flash-lite"))
 
 # ---------- Spam Prompt (used by classifier) ----------
 
@@ -59,14 +66,22 @@ class SpamState(TypedDict):
     message: str
     verdict: str
 
+def _extract_text(content) -> str:
+    if isinstance(content, list) and len(content) > 0 and isinstance(content[0], dict) and "text" in content[0]:
+        return content[0]["text"]
+    if isinstance(content, str):
+        return content
+    return str(content)
+
 # ---------- Node: Injection Filter ----------
 def filter_injection(state: SpamState) -> SpamState:
-    result = llm.invoke(
+    raw = llm.invoke(
         injection_prompt_template.format(
             user_input=state["message"],
             downstream_prompt_template = classify_prompt_template.template
         )
-    ).content.strip()
+    )
+    result = _extract_text(raw.content).strip()
 
     state["verdict"] = result   # SAFE or INJECTION
     return state                # ✅ always return dict
@@ -84,7 +99,7 @@ def classify_spam(state: SpamState) -> SpamState:
     response = llm.invoke(
         classify_prompt_template.format(message=state["message"])
     )
-    state["verdict"] = response.content
+    state["verdict"] = _extract_text(response.content).strip()
     return state
 
 # ---------- Build Graph ----------
@@ -108,16 +123,20 @@ graph.add_edge("classifier", END)
 
 app = graph.compile()
 
-print(f"""Spam detector with prompt-aware injection defense.  Prompt template to detect spam is below:\n
+if __name__ == "__main__":
+    print(f"""Spam detector with prompt-aware injection defense.  Prompt template to detect spam is below:\n
 =====================\n
 {classify_prompt}\n
 =====================\n
 \n""")
-while True:
-    line = input("llm>> ")
-    if not line:
-        break
+    while True:
+        try:
+            line = input("llm>> ")
+        except (EOFError, KeyboardInterrupt):
+            break
+        if not line:
+            break
 
-    result = app.invoke({"message": line})
-    print(result["verdict"])
+        result = app.invoke({"message": line})
+        print(result["verdict"])
 
