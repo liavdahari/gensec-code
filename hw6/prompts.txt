@@ -1,0 +1,23 @@
+# ==============================================================================
+# HOMEWORK 06.3: CODE GENERATION PROMPTS LOG
+# Course: COT4930 - Generative Cybersecurity (GenSec)
+# Student: Liav Dahari (FAU ID: Z23815316)
+# Coding Agent: AntiGravity (Google DeepMind Advanced Agentic Coding Assistant)
+# Application: CyberRAG - Enterprise Security Knowledge & Threat Intelligence Retrieval Engine
+# Architecture: Streamlit + ChromaDB + Multi-Model RAG (Google Gemini & Offline Semantic Engine)
+# ==============================================================================
+
+### PROMPT 1: REPOSITORY SETUP & INITIAL GIT SYNCHRONIZATION
+[COT4930 HW6 - Student: Liavdahari, FAU ID: Z23815316]
+Step 1: Set up the required directory and initial files for Homework 06.3:
+1. Create directory hw6/ with hw6/app.py, hw6/prompts.txt, and hw6/screencast_url.txt.
+2. Initialize hw6/prompts.txt with our project header (AntiGravity agent, course metadata, app overview).
+3. Stage hw6/, commit with message "initial commit", and push to origin/main.
+4. Verify the Python virtual environment and confirm package availability for streamlit, chromadb, and google-genai.
+
+AGENT RESPONSE SUMMARY:
+• Created hw6/ scaffolding with initial required files (app.py, prompts.txt, screencast_url.txt).
+• Configured git tracking and created the initial commit.
+• Pushed initial commit to origin/main on GitHub.
+• Verified local Python environment: Python 3.12 with streamlit, chromadb, and google-genai available.
+• All Step 1 requirements satisfied.
