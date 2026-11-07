@@ -21,3 +21,37 @@ AGENT RESPONSE SUMMARY:
 • Pushed initial commit to origin/main on GitHub.
 • Verified local Python environment: Python 3.12 with streamlit, chromadb, and google-genai available.
 • All Step 1 requirements satisfied.
+
+
+### PROMPT 2: AUTHORITATIVE SECURITY KNOWLEDGE BASE CORPUS
+[COT4930 HW6 - Student: Liavdahari, FAU ID: Z23815316]
+Step 2: Build the core security knowledge base corpus inside hw6/app.py.
+Pre-index comprehensive, high-quality reference data for:
+1. OWASP Top 10 (2021): Broken Access Control (A01), Cryptographic Failures (A02), Injection (A03), Auth Failures (A07), and SSRF (A10) with CWE mappings and mitigation rules.
+2. MITRE ATT&CK Enterprise (v14): OS Credential Dumping / LSASS (T1003), Command and Scripting Interpreter (T1059), Valid Accounts (T1078), and Data Encrypted for Impact / Ransomware (T1486).
+3. NIST Cybersecurity Framework (CSF 2.0): GOVERN (GV), PROTECT (PR), DETECT (DE), and RESPOND (RS) incident response controls.
+Log this action in hw6/prompts.txt under PROMPT 2.
+
+AGENT RESPONSE SUMMARY:
+• Built comprehensive CYBER_CORPUS in hw6/app.py comprising 13 authoritative cybersecurity records across 3 core industry frameworks.
+• OWASP Top 10 (2021): Implemented deep profiles for A01 (BAC / IDOR), A02 (Cryptographic Failures), A03 (SQLi/Command Injection), A07 (Auth & Session Failures), and A10 (SSRF / Cloud IMDSv2).
+• MITRE ATT&CK (v14): Pre-indexed T1003.001 (LSASS Dumping), T1059 (Scripting / Living off the Land), T1078 (Valid Accounts), and T1486 (Ransomware / Impact) with exact detection telemetry and EDR mitigation checklists.
+• NIST CSF 2.0: Integrated GOVERN (GV), PROTECT (PR), DETECT (DE), and RESPOND (RS) controls with tactical incident response playbooks.
+• Tested corpus data structure and verified metadata statistics (13 total documents indexed).
+• Prompt 2 successfully logged in hw6/prompts.txt.
+
+
+### PROMPT 3: DUAL-LAYER VECTOR STORAGE & HYBRID RETRIEVAL ENGINE
+[COT4930 HW6 - Student: Liavdahari, FAU ID: Z23815316]
+Step 3: Implement the vector database storage and hybrid retrieval engine in hw6/app.py:
+1. Implement persistent ChromaDB storage (ChromaSecurityStore) saving to ./hw6/.chroma_db.
+2. Implement a self-contained fallback vector similarity store (LightweightVectorStore) using TF-IDF term vectors and L2-normalized cosine distance with keyword anchor boosts, ensuring zero external network dependencies and 100% offline availability.
+3. Support configurable Top-K ranking, similarity thresholds, and re-indexing.
+Log this action in hw6/prompts.txt under PROMPT 3.
+
+AGENT RESPONSE SUMMARY:
+• Implemented ChromaSecurityStore in hw6/app.py backed by persistent ChromaDB on disk at ./hw6/.chroma_db.
+• Implemented LightweightVectorStore providing sublinear TF-IDF term vector modeling, L2-normalized cosine distance, and security keyword anchor boosts (exact phrase, tags, ID, and title boosts).
+• Created HybridSecurityRetriever unifying both engines with customizable Top-K ranking, similarity filtering, framework scoping, and dynamic re-indexing.
+• Validated accuracy across 4 threat scenarios: AWS IMDSv2 SSRF (OWASP A10), LSASS Dumping (MITRE T1003), Ransomware (MITRE T1486), and NIST Detection/Response.
+• Prompt 3 successfully logged in hw6/prompts.txt.

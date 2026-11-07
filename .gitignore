@@ -36,3 +36,6 @@ dist/
 
 # Local submission notes & scripts
 HW5/screencast_script.md
+
+.chroma_db/
+**/.chroma_db/
