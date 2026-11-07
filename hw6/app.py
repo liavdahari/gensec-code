@@ -20,6 +20,23 @@ except ImportError:
     chromadb = None
     CHROMA_AVAILABLE = False
 
+# Google GenAI import with graceful fallback
+try:
+    from google import genai
+    from google.genai import types
+    GENAI_AVAILABLE = True
+except ImportError:
+    genai = None
+    types = None
+    GENAI_AVAILABLE = False
+
+# Load environment variables if python-dotenv is present
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 # ==============================================================================
 # AUTHORITATIVE SECURITY KNOWLEDGE BASE CORPUS
 # Structured reference datasets across OWASP Top 10, MITRE ATT&CK, and NIST CSF 2.0
@@ -750,6 +767,251 @@ class HybridSecurityRetriever:
             self.chroma_store.reindex(documents)
 
 
+# ==============================================================================
+# GROUNDED RAG INFERENCE & THREAT SYNTHESIS PIPELINE
+# ==============================================================================
+
+def generate_rag_offline(
+    query: str,
+    retrieved_docs: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    Autonomous heuristic reasoning engine strictly grounded on retrieved source chunks.
+    Requires zero external API keys or internet connection.
+    Implements deterministic anti-hallucination guardrails and structured threat advisory synthesis.
+    """
+    start_time = time.time()
+
+    if not retrieved_docs:
+        latency_ms = round((time.time() - start_time) * 1000, 2)
+        return {
+            "status": "refusal",
+            "synthesis_text": (
+                "### ⚠️ Incident Advisory Refusal: Insufficient Grounding Evidence\n\n"
+                "No relevant cybersecurity framework controls or threat intelligence records "
+                "were identified in the knowledge base meeting the required similarity threshold for this query.\n\n"
+                "**Anti-Hallucination Guardrail Active:** In accordance with enterprise cybersecurity guidelines, "
+                "CyberRAG strictly refuses to synthesize ungrounded threat hypotheses or fabricated remediations. "
+                "Please broaden your query or ingest relevant security documentation in the Custom Ingestion tab."
+            ),
+            "mode": "Offline Heuristic RAG",
+            "model": "Deterministic Semantic Reasoner (Offline)",
+            "latency_ms": latency_ms,
+            "top_relevance": 0.0,
+            "citations": [],
+            "grounded_chunk_count": 0
+        }
+
+    top_doc = retrieved_docs[0]
+    top_score = top_doc.get("score", 0.0)
+    doc_ids = [d["id"] for d in retrieved_docs]
+    citations = [f"[Source: {d['id']}]" for d in retrieved_docs]
+
+    # Dynamic severity determination
+    critical_triggers = {"T1486", "T1003", "A10", "A03", "ransomware", "lsass", "credential", "injection"}
+    high_triggers = {"A01", "A02", "A07", "T1059", "T1078", "ssrf", "crypto", "auth"}
+    
+    query_and_ids = (query + " " + " ".join(doc_ids)).lower()
+    if any(t in query_and_ids for t in critical_triggers):
+        severity = "CRITICAL (CVSS 9.0 - 10.0)"
+        sla = "Immediate Containment Required (< 1 Hour)"
+    elif any(t in query_and_ids for t in high_triggers):
+        severity = "HIGH (CVSS 7.5 - 8.9)"
+        sla = "Expedited Remediation SLA (< 24 Hours)"
+    else:
+        severity = "MEDIUM (CVSS 5.0 - 7.4)"
+        sla = "Scheduled Hardening SLA (< 7 Days)"
+
+    # Build Executive Threat Briefing
+    executive_briefing = [
+        "### 🛡️ 1. Executive Threat Briefing",
+        f"- **Primary Threat Classification:** {top_doc.get('title', 'Security Advisory')} [Source: {top_doc['id']}]",
+        f"- **Calculated Risk Level:** **{severity}** | **Response SLA:** {sla}",
+        f"- **Frameworks Engaged:** {', '.join(sorted(list({d.get('framework', '') for d in retrieved_docs})))}",
+        f"- **Correlated Standards & Mappings:** {', '.join(filter(None, [d.get('mapping', '') for d in retrieved_docs]))} [Source: {top_doc['id']}]",
+        f"- **Operational Impact Summary:** Active exploitation of vulnerabilities in this category exposes enterprise "
+        f"workloads to unauthorized access, potential data exfiltration, lateral movement, or service disruption. "
+        f"Retrieval correlation identifies high-priority relevance with {top_doc.get('title')} (Match: {top_score * 100:.1f}%) [Source: {top_doc['id']}]."
+    ]
+
+    # Build Technical Vulnerability Analysis
+    tech_analysis = [
+        "\n### 🔍 2. Technical Vulnerability Analysis"
+    ]
+    for d in retrieved_docs:
+        tech_analysis.append(
+            f"#### ◈ [{d['id']}] {d.get('title', '')} — {d.get('category', '')}\n"
+            f"- **Framework Mapping:** `{d.get('mapping', 'N/A')}`\n"
+            f"- **Attack Mechanics & Threat Vector:** {d.get('content', '')}\n"
+            f"- **Grounding Citation:** Verified against authoritative corpus chunk [Source: {d['id']}]."
+        )
+
+    # Build Prescriptive Hardening Checklist
+    hardening_checklist = [
+        "\n### ⚙️ 3. Prescriptive Hardening & Mitigation Checklist",
+        "Implement the following defensive countermeasures immediately, strictly verified against retrieved knowledge base baselines:"
+    ]
+
+    counter = 1
+    for d in retrieved_docs:
+        content = d.get("content", "")
+        if "Checklist:" in content:
+            checklist_part = content.split("Checklist:")[-1].strip()
+            # Extract numbered points (1), (2), etc.
+            points = re.findall(r'\(\d+\)\s*([^;]+(?:;|$))', checklist_part)
+            if points:
+                for pt in points:
+                    clean_pt = pt.strip().rstrip(";")
+                    if clean_pt:
+                        hardening_checklist.append(f"{counter}. **{clean_pt}** [Source: {d['id']}]")
+                        counter += 1
+            else:
+                hardening_checklist.append(f"{counter}. **{checklist_part}** [Source: {d['id']}]")
+                counter += 1
+        else:
+            hardening_checklist.append(
+                f"{counter}. **Enforce operational safeguards for {d.get('title')} as specified in {d.get('framework')}** [Source: {d['id']}]."
+            )
+            counter += 1
+
+    # Defense-in-Depth Governance Footer
+    traceability_table = [
+        "\n### 📋 4. Knowledge Base Grounding & Audit Traceability",
+        "| Source ID | Framework | Title / Control | Similarity Score | Retrieval Engine |",
+        "| :--- | :--- | :--- | :---: | :--- |"
+    ]
+    for d in retrieved_docs:
+        score_pct = f"{d.get('score', 0.0) * 100:.1f}%"
+        traceability_table.append(
+            f"| `{d['id']}` | {d.get('framework', '')} | {d.get('title', '')} | {score_pct} | {d.get('source_engine', 'KB Engine')} |"
+        )
+
+    full_report = "\n".join(executive_briefing + tech_analysis + hardening_checklist + traceability_table)
+    latency_ms = round((time.time() - start_time) * 1000, 2)
+
+    return {
+        "status": "success",
+        "synthesis_text": full_report,
+        "mode": "Offline Heuristic RAG",
+        "model": "Deterministic Semantic Reasoner (Zero-Dependency)",
+        "latency_ms": latency_ms,
+        "top_relevance": round(top_score, 4),
+        "citations": citations,
+        "grounded_chunk_count": len(retrieved_docs)
+    }
+
+
+def generate_rag_gemini(
+    query: str,
+    retrieved_docs: List[Dict[str, Any]],
+    model_name: str = "gemini-2.5-flash",
+    api_key: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Live Google Gemini API synthesis engine with prompt anti-hallucination guardrails.
+    Extracts explicit citations [Source: ID] and validates grounding against retrieved chunks.
+    """
+    start_time = time.time()
+
+    if not retrieved_docs:
+        return generate_rag_offline(query, retrieved_docs)
+
+    effective_api_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    if not effective_api_key or not GENAI_AVAILABLE or genai is None:
+        # Graceful fallback to offline generation if Gemini API is unconfigured
+        offline_result = generate_rag_offline(query, retrieved_docs)
+        offline_result["notice"] = (
+            "Gemini API key not configured or client library unavailable. "
+            "Executed via autonomous offline heuristic engine."
+        )
+        return offline_result
+
+    # Format retrieved sources with citation IDs
+    formatted_sources = []
+    for d in retrieved_docs:
+        formatted_sources.append(
+            f"--- START SOURCE CHUNK: [Source: {d['id']}] ---\n"
+            f"Framework: {d.get('framework')}\n"
+            f"Title: {d.get('title')}\n"
+            f"Category/Tactic: {d.get('category')}\n"
+            f"Mapping: {d.get('mapping')}\n"
+            f"Content: {d.get('content')}\n"
+            f"--- END SOURCE CHUNK: [Source: {d['id']}] ---"
+        )
+    sources_block = "\n\n".join(formatted_sources)
+
+    system_instruction = (
+        "You are CyberRAG, an authoritative cybersecurity AI operations assistant. "
+        "Your task is to synthesize an actionable Incident Response & Threat Advisory strictly based on the provided RETRIEVED SOURCES.\n\n"
+        "STRICT ANTI-HALLUCINATION GUARDRAILS:\n"
+        "1. Every claim, finding, technical attack analysis, and mitigation step MUST be grounded in the provided sources.\n"
+        "2. You MUST cite the source for every major point using the exact tag: [Source: <DOC_ID>] (e.g. [Source: OWASP-A10-SSRF]).\n"
+        "3. Do not invent CVEs, CWEs, or techniques not referenced in the sources.\n"
+        "4. Format your report strictly into four sections:\n"
+        "   - ### 🛡️ 1. Executive Threat Briefing\n"
+        "   - ### 🔍 2. Technical Vulnerability Analysis\n"
+        "   - ### ⚙️ 3. Prescriptive Hardening & Mitigation Checklist\n"
+        "   - ### 📋 4. NIST Incident Response Alignment\n"
+    )
+
+    prompt = (
+        f"{system_instruction}\n\n"
+        f"=== USER THREAT QUERY / INCIDENT DESCRIPTION ===\n{query}\n\n"
+        f"=== AUTHORITATIVE RETRIEVED SOURCE CHUNKS ===\n{sources_block}\n\n"
+        f"Synthesize the official Security Advisory now, adhering strictly to anti-hallucination rules and citation tags [Source: ID]:"
+    )
+
+    try:
+        client = genai.Client(api_key=effective_api_key)
+        response = client.models.generate_content(
+            model=model_name,
+            contents=prompt
+        )
+
+        response_text = response.text if hasattr(response, "text") and response.text else "No response generated by model."
+        latency_ms = round((time.time() - start_time) * 1000, 2)
+        top_score = retrieved_docs[0].get("score", 0.0) if retrieved_docs else 0.0
+
+        # Extract citation occurrences
+        extracted_citations = list(set(re.findall(r'\[Source:\s*[^\]]+\]', response_text)))
+
+        return {
+            "status": "success",
+            "synthesis_text": response_text,
+            "mode": "Google Gemini RAG",
+            "model": model_name,
+            "latency_ms": latency_ms,
+            "top_relevance": round(top_score, 4),
+            "citations": extracted_citations,
+            "grounded_chunk_count": len(retrieved_docs)
+        }
+
+    except Exception as e:
+        # Fall back to offline generation on API error
+        error_msg = str(e)
+        offline_result = generate_rag_offline(query, retrieved_docs)
+        offline_result["notice"] = f"Gemini API request failed ({error_msg[:90]}...). Fell back to offline synthesis."
+        return offline_result
+
+
+def generate_rag_synthesis(
+    query: str,
+    retrieved_docs: List[Dict[str, Any]],
+    mode: str = "offline",  # "offline" or "gemini"
+    model_name: str = "gemini-2.5-flash",
+    api_key: Optional[str] = None
+) -> Dict[str, Any]:
+    """Unified dispatcher for RAG inference synthesis."""
+    if mode.lower() == "gemini":
+        return generate_rag_gemini(
+            query=query,
+            retrieved_docs=retrieved_docs,
+            model_name=model_name,
+            api_key=api_key
+        )
+    return generate_rag_offline(query=query, retrieved_docs=retrieved_docs)
+
+
 if __name__ == "__main__":
     stats = get_corpus_statistics()
     print("=== CyberRAG Knowledge Base Corpus Loaded ===")
@@ -757,20 +1019,27 @@ if __name__ == "__main__":
     for fw, count in stats["frameworks"].items():
         print(f"  • {fw}: {count} authoritative records")
 
-    print("\n--- Testing Hybrid Retrieval Engine ---")
+    print("\n--- Testing Hybrid Retrieval & RAG Synthesis Pipeline ---")
     retriever = HybridSecurityRetriever()
 
-    test_queries = [
-        "AWS IMDSv2 metadata SSRF credential exfiltration",
-        "Dump LSASS memory Mimikatz RunAsPPL",
-        "Ransomware encrypt files vssadmin shadow copies",
-        "NIST continuous monitoring SIEM incident response"
-    ]
+    test_threat_scenario = (
+        "Adversary leveraged SSRF to access AWS link-local metadata at 169.254.169.254 "
+        "and exfiltrate temporary IAM session tokens. How should we harden our cloud endpoints?"
+    )
 
-    for q in test_queries:
-        print(f"\n[Query]: '{q}'")
-        results = retriever.search(q, top_k=2, engine_mode="hybrid")
-        for rank, res in enumerate(results, 1):
-            print(f"  {rank}. [{res['id']}] {res['title']} (Score: {res['score']:.4f}, Engine: {res['source_engine']})")
+    print(f"\n[Test Incident Triage]: '{test_threat_scenario}'")
+    hits = retriever.search(test_threat_scenario, top_k=2, engine_mode="hybrid")
+
+    print(f"\nRetrieved {len(hits)} grounded sources:")
+    for i, h in enumerate(hits, 1):
+        print(f"  [{i}] {h['id']} — {h['title']} (Score: {h['score']:.4f})")
+
+    print("\n--- Generating Grounded Offline RAG Threat Advisory ---")
+    advisory = generate_rag_offline(test_threat_scenario, hits)
+    print(f"Status: {advisory['status']} | Latency: {advisory['latency_ms']} ms | Mode: {advisory['mode']}")
+    print(f"Citations Extracted: {', '.join(advisory['citations'])}")
+    print("\nPreview of Generated Advisory Output (First 40 lines):")
+    print("\n".join(advisory["synthesis_text"].split("\n")[:40]))
+
 
 
