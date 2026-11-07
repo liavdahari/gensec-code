@@ -1,6 +1,13 @@
-# HW6 Screencast Demonstration URL
-# Student: Liav Dahari (FAU ID: Z23815316)
-# Course: COT4930 - Security Engineering with Generative AI (GenSec)
-# Repository URL: https://github.com/liavdahari/gensec-code
-# Coding Agent: AntiGravity (Google DeepMind)
-# Screencast URL: <enter here the Youtube URL of your screencast>
+# ==============================================================================
+# COT4930 Generative Cybersecurity — Homework 06.3 Screencast Submission
+# Student: Liav Dahari | FAU ID: Z23815316
+# Coding Agent: AntiGravity (Google DeepMind Advanced Agentic Assistant)
+# Application: CyberRAG — Enterprise Security Knowledge & Threat Intelligence Retrieval Engine
+# Repository: https://github.com/liavdahari/gensec-code/tree/main/hw6
+# ==============================================================================
+
+Screencast URL:
+<enter here the Youtube URL of your screencast>
+
+Narration Script Reference:
+See hw6/screencast_script.md for the complete timed presentation script and visual cues.

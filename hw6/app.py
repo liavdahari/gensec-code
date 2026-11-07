@@ -1517,60 +1517,156 @@ def run_streamlit_app():
                 )
 
     # --------------------------------------------------------------------------
-    # TAB 3: CUSTOM INGESTION
+    # TAB 3: CUSTOM INGESTION & DYNAMIC CHUNKING
     # --------------------------------------------------------------------------
     with tab_ingest:
         st.markdown("### 📥 Dynamic Custom Security Documentation Ingestion")
-        st.write("Upload or paste enterprise security documentation, threat bulletins, or incident post-mortems to expand the vector index in real-time.")
+        st.write(
+            "Upload or paste enterprise security documentation, threat bulletins, or incident post-mortems. "
+            "CyberRAG dynamically chunks long texts and re-indexes both ChromaDB and the offline vector store in real-time."
+        )
 
         ingest_mode = st.radio("Ingestion Source:", ["Paste Document Text", "Upload Security File (.txt, .md, .json)"], horizontal=True)
 
-        new_doc_id = st.text_input("Document ID:", value=f"CUSTOM-DOC-{len(retriever.documents) + 1}")
-        new_doc_framework = st.selectbox("Assign Framework:", ["Enterprise Internal Policy", "Vendor Threat Advisory", "Zero-Day CVE Brief", "Custom IR Playbook"])
-        new_doc_title = st.text_input("Document Title:", placeholder="e.g. Internal Zero-Trust Authentication Architecture Baseline")
-        new_doc_mapping = st.text_input("Associated Standards Mapping:", placeholder="e.g. CWE-287, NIST PR.AA-01, internal policy REF-402")
-        new_doc_tags = st.text_input("Tags (comma-separated):", placeholder="e.g. zero trust, pam, okta, iam, session")
+        col_id, col_fw = st.columns(2)
+        with col_id:
+            new_doc_id = st.text_input("Document ID Prefix:", value=f"CUSTOM-SEC-{len(retriever.documents) + 1}")
+        with col_fw:
+            new_doc_framework = st.selectbox(
+                "Assign Framework / Domain:",
+                ["Enterprise Internal Policy", "Vendor Threat Advisory", "Zero-Day CVE Brief", "Custom IR Playbook", "Cloud Architecture Standard"]
+            )
 
-        new_content = ""
+        new_doc_title = st.text_input("Document Title:", placeholder="e.g. Internal Zero-Trust Identity & PAM Hardening Baseline")
+        new_doc_mapping = st.text_input("Standards Mapping (optional):", placeholder="e.g. CWE-287, NIST PR.AA, ISO 27001 A.9")
+        new_doc_tags = st.text_input("Search Keyword Tags (comma-separated):", placeholder="e.g. zero trust, pam, okta, iam, session, token")
+
+        # Dynamic Chunking Controls
+        with st.expander("⚙️ Dynamic Chunking Configuration", expanded=True):
+            chunk_col1, chunk_col2 = st.columns(2)
+            with chunk_col1:
+                enable_chunking = st.checkbox("Enable Dynamic Chunking for Long Texts", value=True)
+            with chunk_col2:
+                chunk_size_words = st.slider("Target Chunk Size (Words):", min_value=50, max_value=400, value=150, step=25)
+
+        raw_content = ""
+        parsed_json_items = []
+
         if ingest_mode == "Paste Document Text":
-            new_content = st.text_area("Document Content / Security Guidance:", height=150, placeholder="Paste raw security advisory or guidance text here...")
+            raw_content = st.text_area(
+                "Security Text / Intelligence Report:",
+                height=180,
+                placeholder="Paste raw security advisory, incident report, or hardening instructions here..."
+            )
         else:
-            uploaded_file = st.file_uploader("Upload File:", type=["txt", "md", "json"])
+            uploaded_file = st.file_uploader("Upload Security File:", type=["txt", "md", "json"])
             if uploaded_file is not None:
-                new_content = uploaded_file.read().decode("utf-8")
-                st.success(f"File '{uploaded_file.name}' loaded successfully ({len(new_content)} characters).")
+                file_bytes = uploaded_file.read().decode("utf-8")
+                if uploaded_file.name.endswith(".json"):
+                    try:
+                        data = json.loads(file_bytes)
+                        if isinstance(data, list):
+                            parsed_json_items = data
+                            st.success(f"Parsed JSON array with {len(data)} items from '{uploaded_file.name}'.")
+                        elif isinstance(data, dict):
+                            parsed_json_items = [data]
+                            st.success(f"Parsed structured JSON object from '{uploaded_file.name}'.")
+                    except Exception as e:
+                        st.error(f"Error parsing JSON: {e}")
+                        raw_content = file_bytes
+                else:
+                    raw_content = file_bytes
+                    st.success(f"Loaded '{uploaded_file.name}' ({len(raw_content)} chars).")
 
-        if st.button("⚡ Ingest & Re-Index Vector Store", type="primary"):
-            if not new_doc_title.strip() or not new_content.strip():
-                st.error("Title and Content are required to index a document.")
+        if st.button("⚡ Ingest & Dynamically Re-Index Vector Store", type="primary"):
+            docs_to_add: List[Dict[str, Any]] = []
+            tags_list = [t.strip() for t in new_doc_tags.split(",") if t.strip()]
+
+            # Handle JSON array batch ingestion
+            if parsed_json_items:
+                for idx, item in enumerate(parsed_json_items, 1):
+                    item_content = item.get("content", item.get("description", str(item)))
+                    docs_to_add.append({
+                        "id": f"{new_doc_id.strip()}-J{idx}",
+                        "framework": item.get("framework", new_doc_framework),
+                        "title": item.get("title", f"{new_doc_title} (Item {idx})"),
+                        "category": item.get("category", "Structured Threat Intel"),
+                        "mapping": item.get("mapping", new_doc_mapping.strip()),
+                        "tags": item.get("tags", tags_list),
+                        "content": item_content
+                    })
+            elif raw_content.strip():
+                if not new_doc_title.strip():
+                    st.error("Please provide a Document Title.")
+                else:
+                    words = raw_content.strip().split()
+                    if enable_chunking and len(words) > chunk_size_words:
+                        # Chunk words with slight overlap
+                        overlap = 20
+                        step = max(1, chunk_size_words - overlap)
+                        chunk_idx = 1
+                        for i in range(0, len(words), step):
+                            chunk_words = words[i:i + chunk_size_words]
+                            chunk_text = " ".join(chunk_words)
+                            docs_to_add.append({
+                                "id": f"{new_doc_id.strip()}-C{chunk_idx}",
+                                "framework": new_doc_framework,
+                                "title": f"{new_doc_title.strip()} (Part {chunk_idx})",
+                                "category": "Custom Ingested Intelligence",
+                                "mapping": new_doc_mapping.strip(),
+                                "tags": tags_list,
+                                "content": chunk_text
+                            })
+                            chunk_idx += 1
+                    else:
+                        docs_to_add.append({
+                            "id": new_doc_id.strip(),
+                            "framework": new_doc_framework,
+                            "title": new_doc_title.strip(),
+                            "category": "Custom Ingested Intelligence",
+                            "mapping": new_doc_mapping.strip(),
+                            "tags": tags_list,
+                            "content": raw_content.strip()
+                        })
+
+            if not docs_to_add:
+                st.error("No valid text or JSON content to ingest.")
             else:
-                tags_list = [t.strip() for t in new_doc_tags.split(",") if t.strip()]
-                new_doc = {
-                    "id": new_doc_id.strip(),
-                    "framework": new_doc_framework,
-                    "title": new_doc_title.strip(),
-                    "category": "Custom Ingested Intelligence",
-                    "mapping": new_doc_mapping.strip(),
-                    "tags": tags_list,
-                    "content": new_content.strip()
-                }
-
-                updated_docs = retriever.documents + [new_doc]
-                retriever.reindex(updated_docs)
-                st.success(f"Document [{new_doc_id}] successfully indexed! Total documents in vector index: {len(retriever.documents)}")
+                updated_corpus = retriever.documents + docs_to_add
+                retriever.reindex(updated_corpus)
+                st.success(
+                    f"🎉 Successfully ingested and indexed {len(docs_to_add)} chunk(s)! "
+                    f"Total active knowledge base size: {len(retriever.documents)} documents."
+                )
 
     # --------------------------------------------------------------------------
     # TAB 4: RAG PERFORMANCE & AUDIT LOG
     # --------------------------------------------------------------------------
     with tab_audit:
-        st.markdown("### 📊 RAG Performance & Incident Audit Log")
-        st.write("Review real-time execution telemetry, query latencies, grounding relevance, and citation logs for the current session.")
+        st.markdown("### 📊 RAG Performance & Incident Telemetry Audit Log")
+        st.write("Real-time telemetry, query latencies, vector engine metrics, and grounding audit logs.")
 
-        if not st.session_state["audit_log"]:
-            st.info("No queries have been executed yet in this session. Run a query in Tab 1 to generate telemetry records.")
-        else:
+        audit_records = st.session_state["audit_log"]
+
+        # Summary Telemetry Cards
+        if audit_records:
+            total_queries = len(audit_records)
+            avg_retrieval = round(sum(r["retrieval_ms"] for r in audit_records) / total_queries, 2)
+            avg_gen = round(sum(r["generation_ms"] for r in audit_records) / total_queries, 2)
+
+            kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+            with kpi1:
+                st.metric("Total Triage Inquiries", total_queries)
+            with kpi2:
+                st.metric("Avg Retrieval Latency", f"{avg_retrieval} ms")
+            with kpi3:
+                st.metric("Avg Generation Latency", f"{avg_gen} ms")
+            with kpi4:
+                st.metric("Active KB Chunks", len(retriever.documents))
+
+            st.markdown("---")
             st.dataframe(
-                st.session_state["audit_log"],
+                audit_records,
                 use_container_width=True,
                 column_config={
                     "timestamp": "Timestamp",
@@ -1585,13 +1681,22 @@ def run_streamlit_app():
                 }
             )
 
-            audit_json = json.dumps(st.session_state["audit_log"], indent=2)
-            st.download_button(
-                "📥 Export Telemetry Audit Log (JSON)",
-                data=audit_json,
-                file_name="rag_performance_audit_log.json",
-                mime="application/json"
-            )
+            act_col1, act_col2 = st.columns([1, 3])
+            with act_col1:
+                audit_json = json.dumps(audit_records, indent=2)
+                st.download_button(
+                    "📥 Export Audit Log (JSON)",
+                    data=audit_json,
+                    file_name="rag_performance_audit_log.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+            with act_col2:
+                if st.button("🗑️ Clear Audit Log", use_container_width=False):
+                    st.session_state["audit_log"] = []
+                    st.rerun()
+        else:
+            st.info("No queries executed yet in this session. Run a threat triage query in Tab 1 to generate telemetry entries.")
 
 
 def main():

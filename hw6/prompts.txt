@@ -91,3 +91,22 @@ AGENT RESPONSE SUMMARY:
 • Added collapsible citation cards detailing chunk metadata and 1-click export to Markdown Report and JSON Security Advisory.
 • Launched active Streamlit server at http://localhost:8501.
 • Prompt 5 successfully logged in hw6/prompts.txt.
+
+
+### PROMPT 6: KNOWLEDGE BASE EXPLORER, CUSTOM INGESTION & AUDIT TELEMETRY
+[COT4930 HW6 - Student: Liavdahari, FAU ID: Z23815316]
+Step 6: Complete the remaining application features and documentation:
+1. Implement Tab 2 (Knowledge Base Explorer) with framework filtering and search.
+2. Implement Tab 3 (Custom Ingestion) allowing users to upload .txt, .md, .json files with dynamic chunking and real-time vector re-indexing.
+3. Implement Tab 4 (RAG Performance & Audit Log) with live query telemetry and JSON export.
+4. Create hw6/screencast_script.md for our video demonstration and update hw6/screencast_url.txt and hw6/README.md.
+5. Push final code and prompt log to GitHub.
+Log this action in hw6/prompts.txt under PROMPT 6.
+
+AGENT RESPONSE SUMMARY:
+• Implemented Tab 2 (Knowledge Base Explorer) providing real-time text searching, framework filtering, and detailed structured card displays across all pre-indexed documents.
+• Implemented Tab 3 (Custom Ingestion) supporting raw text pasting and multi-format file uploads (.txt, .md, .json) with configurable dynamic word chunking and automatic real-time vector re-indexing.
+• Implemented Tab 4 (RAG Performance & Incident Audit Log) providing real-time session telemetry tables, KPI summary metrics (total queries, avg retrieval latency, avg generation latency), and 1-click JSON telemetry export.
+• Created professional timed video presentation script in hw6/screencast_script.md, updated hw6/screencast_url.txt, and generated comprehensive architecture documentation in hw6/README.md.
+• Final code and documentation staged, committed, and pushed to origin/main on GitHub.
+• Prompt 6 successfully logged in hw6/prompts.txt.
