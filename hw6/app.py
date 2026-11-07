@@ -6,10 +6,20 @@ Coding Agent: AntiGravity (Google DeepMind)
 """
 
 import os
+import sys
 import re
+import json
 import math
 import time
+from datetime import datetime
 from typing import List, Dict, Any, Optional
+
+try:
+    import streamlit as st
+    STREAMLIT_AVAILABLE = True
+except ImportError:
+    st = None
+    STREAMLIT_AVAILABLE = False
 
 # Optional ChromaDB import with graceful fallback
 try:
@@ -1012,34 +1022,618 @@ def generate_rag_synthesis(
     return generate_rag_offline(query=query, retrieved_docs=retrieved_docs)
 
 
-if __name__ == "__main__":
-    stats = get_corpus_statistics()
-    print("=== CyberRAG Knowledge Base Corpus Loaded ===")
-    print(f"Total Pre-indexed Documents: {stats['total_documents']}")
-    for fw, count in stats["frameworks"].items():
-        print(f"  • {fw}: {count} authoritative records")
+# ==============================================================================
+# STREAMLIT CYBERSECURITY USER INTERFACE
+# ==============================================================================
 
-    print("\n--- Testing Hybrid Retrieval & RAG Synthesis Pipeline ---")
-    retriever = HybridSecurityRetriever()
+CYBER_CUSTOM_CSS = """
+<style>
+    /* Dark Cyber Theme Palette */
+    .stApp {
+        background-color: #0a0e17;
+        color: #e2e8f0;
+    }
+    
+    /* Glowing Headers */
+    h1, h2, h3 {
+        color: #00f2fe !important;
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        font-weight: 700;
+        letter-spacing: -0.5px;
+    }
+    
+    /* Cyber Title Glow */
+    .cyber-title {
+        font-size: 2.2rem;
+        font-weight: 800;
+        background: linear-gradient(135deg, #00f2fe 0%, #4facfe 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 4px;
+        text-shadow: 0 0 25px rgba(0, 242, 254, 0.35);
+    }
+    
+    .cyber-subtitle {
+        color: #94a3b8;
+        font-size: 1.0rem;
+        margin-bottom: 20px;
+    }
 
-    test_threat_scenario = (
+    /* Metadata Badge Bar */
+    .badge-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-bottom: 20px;
+    }
+    
+    .cyber-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 6px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid #1e293b;
+        color: #cbd5e1;
+    }
+    
+    .badge-cyan {
+        border-color: #00f2fe;
+        color: #00f2fe;
+        background: rgba(0, 242, 254, 0.1);
+    }
+    
+    .badge-green {
+        border-color: #00ff88;
+        color: #00ff88;
+        background: rgba(0, 255, 136, 0.1);
+    }
+    
+    .badge-purple {
+        border-color: #a855f7;
+        color: #c084fc;
+        background: rgba(168, 85, 247, 0.1);
+    }
+
+    /* Metric Cards */
+    div[data-testid="stMetric"] {
+        background: rgba(15, 23, 42, 0.7);
+        border: 1px solid #1e293b;
+        border-top: 3px solid #00f2fe;
+        border-radius: 8px;
+        padding: 12px 16px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+    
+    div[data-testid="stMetricValue"] {
+        color: #00f2fe !important;
+        font-family: 'JetBrains Mono', 'Fira Code', monospace;
+        font-weight: 700;
+    }
+
+    /* Source Cards & Expanders */
+    .streamlit-expanderHeader {
+        background-color: #0f172a !important;
+        border: 1px solid #1e293b !important;
+        border-radius: 6px !important;
+        color: #e2e8f0 !important;
+    }
+    
+    /* Preset Buttons */
+    div.stButton > button {
+        border-radius: 6px;
+        font-weight: 600;
+        transition: all 0.2s ease-in-out;
+    }
+    
+    div.stButton > button:hover {
+        border-color: #00f2fe !important;
+        box-shadow: 0 0 10px rgba(0, 242, 254, 0.4) !important;
+    }
+
+    /* Sidebar Styling */
+    section[data-testid="stSidebar"] {
+        background-color: #0b111e;
+        border-right: 1px solid #1e293b;
+    }
+</style>
+"""
+
+PRESET_SCENARIOS = {
+    "🌐 SSRF Cloud Exfil": (
         "Adversary leveraged SSRF to access AWS link-local metadata at 169.254.169.254 "
         "and exfiltrate temporary IAM session tokens. How should we harden our cloud endpoints?"
+    ),
+    "🔑 LSASS Dumping": (
+        "Threat actor executed Mimikatz to dump plaintext credentials and NTLM hashes from "
+        "LSASS.exe process memory. How do we detect and mitigate this with Credential Guard and RunAsPPL?"
+    ),
+    "🔓 Broken Access Control": (
+        "Attacker tampered with user ID parameters (IDOR) to access other tenants' financial records "
+        "across REST endpoints. How do we enforce server-side RBAC and deny-by-default?"
+    ),
+    "🛑 Ransomware Response": (
+        "Ransomware actor purged volume shadow copies with vssadmin and initiated multithreaded "
+        "file encryption. What immediate incident containment and immutable backup restoration controls apply?"
+    )
+}
+
+
+def run_streamlit_app():
+    """Renders the comprehensive CyberRAG Streamlit web application."""
+    if not STREAMLIT_AVAILABLE or st is None:
+        print("Streamlit package is not installed. Please run via a supported environment.")
+        return
+
+    st.set_page_config(
+        page_title="CyberRAG | Security Knowledge & Threat Retrieval Engine",
+        page_icon="🛡️",
+        layout="wide",
+        initial_sidebar_state="expanded"
     )
 
-    print(f"\n[Test Incident Triage]: '{test_threat_scenario}'")
-    hits = retriever.search(test_threat_scenario, top_k=2, engine_mode="hybrid")
+    # Inject Cyber Dark Theme CSS
+    st.markdown(CYBER_CUSTOM_CSS, unsafe_allow_html=True)
 
-    print(f"\nRetrieved {len(hits)} grounded sources:")
-    for i, h in enumerate(hits, 1):
-        print(f"  [{i}] {h['id']} — {h['title']} (Score: {h['score']:.4f})")
+    # Initialize Global Application State
+    if "retriever" not in st.session_state:
+        st.session_state["retriever"] = HybridSecurityRetriever()
+    if "audit_log" not in st.session_state:
+        st.session_state["audit_log"] = []
+    if "current_query" not in st.session_state:
+        st.session_state["current_query"] = PRESET_SCENARIOS["🌐 SSRF Cloud Exfil"]
+    if "last_results" not in st.session_state:
+        st.session_state["last_results"] = None
 
-    print("\n--- Generating Grounded Offline RAG Threat Advisory ---")
-    advisory = generate_rag_offline(test_threat_scenario, hits)
-    print(f"Status: {advisory['status']} | Latency: {advisory['latency_ms']} ms | Mode: {advisory['mode']}")
-    print(f"Citations Extracted: {', '.join(advisory['citations'])}")
-    print("\nPreview of Generated Advisory Output (First 40 lines):")
-    print("\n".join(advisory["synthesis_text"].split("\n")[:40]))
+    retriever: HybridSecurityRetriever = st.session_state["retriever"]
+
+    # ==========================================================================
+    # SIDEBAR CONFIGURATION
+    # ==========================================================================
+    with st.sidebar:
+        st.markdown("### 🛡️ CyberRAG Console")
+        st.markdown(
+            """
+            <div class="badge-bar">
+                <span class="cyber-badge badge-cyan">Student: Liav Dahari</span>
+                <span class="cyber-badge badge-purple">FAU ID: Z23815316</span>
+                <span class="cyber-badge">COT4930 GenSec</span>
+                <span class="cyber-badge badge-green">Agent: AntiGravity</span>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
+        st.divider()
+
+        st.markdown("#### 🧠 RAG Reasoning Engine")
+        rag_mode_selection = st.radio(
+            "Select Inference Engine:",
+            ["Offline Heuristic Engine (Deterministic & Zero-Dependency)", "Google Gemini API (Live Generative AI)"],
+            index=0,
+            help="Choose between autonomous local heuristic synthesis or live Gemini cloud inference."
+        )
+        rag_mode = "gemini" if "Google Gemini" in rag_mode_selection else "offline"
+
+        gemini_model = "gemini-2.5-flash"
+        api_key_input = ""
+        if rag_mode == "gemini":
+            gemini_model = st.selectbox(
+                "Gemini Model:",
+                ["gemini-2.5-flash", "gemini-1.5-pro", "gemini-2.0-flash-exp"],
+                index=0
+            )
+            api_key_input = st.text_input(
+                "Gemini API Key (optional if in .env):",
+                type="password",
+                value=os.environ.get("GEMINI_API_KEY", os.environ.get("GOOGLE_API_KEY", "")),
+                help="Enter Google Gemini API key or set GEMINI_API_KEY in .env"
+            )
+
+        st.divider()
+        st.markdown("#### 🔍 Retrieval Engine & Vector Store")
+        retrieval_mode_selection = st.selectbox(
+            "Vector Storage Strategy:",
+            [
+                "Hybrid (ChromaDB + TF-IDF Boosted)",
+                "Persistent ChromaDB Store",
+                "Lightweight Vector Store (100% Offline)"
+            ],
+            index=0
+        )
+        engine_mode_map = {
+            "Hybrid (ChromaDB + TF-IDF Boosted)": "hybrid",
+            "Persistent ChromaDB Store": "chroma",
+            "Lightweight Vector Store (100% Offline)": "lightweight"
+        }
+        engine_mode = engine_mode_map[retrieval_mode_selection]
+
+        top_k = st.slider("Top-K Grounded Chunks:", min_value=1, max_value=6, value=3, step=1)
+        similarity_threshold = st.slider("Similarity Threshold:", min_value=0.00, max_value=0.70, value=0.05, step=0.01)
+
+        framework_filter = st.selectbox(
+            "Framework Filter:",
+            ["All Frameworks", "OWASP Top 10 (2021)", "MITRE ATT&CK (v14)", "NIST CSF 2.0"],
+            index=0
+        )
+
+        st.divider()
+        st.markdown("#### 📡 System Status")
+        chroma_status = "🟢 Active (./hw6/.chroma_db)" if retriever.chroma_store.is_ready else "🟡 Fallback (Lightweight)"
+        st.write(f"**ChromaDB:** {chroma_status}")
+        st.write(f"**GenAI SDK:** {'🟢 Installed' if GENAI_AVAILABLE else '🔴 Missing'}")
+        st.write(f"**Indexed Knowledge Base:** {len(retriever.documents)} documents")
+
+    # ==========================================================================
+    # MAIN APPLICATION WORKSPACE
+    # ==========================================================================
+    st.markdown('<div class="cyber-title">🛡️ CyberRAG</div>', unsafe_allow_html=True)
+    st.markdown(
+        '<div class="cyber-subtitle">Enterprise Security Knowledge & Threat Intelligence Retrieval Engine | '
+        'COT4930 Generative Cybersecurity — Homework 06.3</div>',
+        unsafe_allow_html=True
+    )
+
+    tab_triage, tab_explorer, tab_ingest, tab_audit = st.tabs([
+        "🎯 Threat Query & Incident Triage",
+        "📚 Knowledge Base Explorer",
+        "📥 Custom Ingestion",
+        "📊 RAG Performance & Audit Log"
+    ])
+
+    # --------------------------------------------------------------------------
+    # TAB 1: THREAT QUERY & INCIDENT TRIAGE
+    # --------------------------------------------------------------------------
+    with tab_triage:
+        st.markdown("##### ⚡ One-Click Threat Scenario Presets")
+        preset_cols = st.columns(4)
+        for idx, (label, text) in enumerate(PRESET_SCENARIOS.items()):
+            with preset_cols[idx]:
+                if st.button(label, use_container_width=True, key=f"btn_preset_{idx}"):
+                    st.session_state["current_query"] = text
+                    st.rerun()
+
+        # Query Input Area
+        query_text = st.text_area(
+            "Incident Telemetry / Security Inquiry Query:",
+            value=st.session_state.get("current_query", ""),
+            height=90,
+            placeholder="Describe the incident symptoms, malware signatures, or security framework questions...",
+            key="threat_query_input"
+        )
+
+        execute_col1, execute_col2 = st.columns([3, 1])
+        with execute_col1:
+            run_triage = st.button("🚀 Execute Grounded Threat Triage", type="primary", use_container_width=True)
+        with execute_col2:
+            clear_btn = st.button("🔄 Clear", use_container_width=True)
+            if clear_btn:
+                st.session_state["current_query"] = ""
+                st.session_state["last_results"] = None
+                st.rerun()
+
+        if run_triage and query_text.strip():
+            with st.spinner("Retrieving grounded cybersecurity evidence and synthesizing threat advisory..."):
+                t_retrieval_start = time.time()
+                hits = retriever.search(
+                    query=query_text,
+                    top_k=top_k,
+                    similarity_threshold=similarity_threshold,
+                    framework_filter=framework_filter,
+                    engine_mode=engine_mode
+                )
+                retrieval_latency = round((time.time() - t_retrieval_start) * 1000, 2)
+
+                t_gen_start = time.time()
+                advisory = generate_rag_synthesis(
+                    query=query_text,
+                    retrieved_docs=hits,
+                    mode=rag_mode,
+                    model_name=gemini_model,
+                    api_key=api_key_input
+                )
+                generation_latency = round((time.time() - t_gen_start) * 1000, 2)
+
+                top_match_pct = round((hits[0]["score"] * 100), 1) if hits else 0.0
+
+                result_bundle = {
+                    "query": query_text,
+                    "hits": hits,
+                    "advisory": advisory,
+                    "retrieval_latency_ms": retrieval_latency,
+                    "generation_latency_ms": generation_latency,
+                    "top_match_pct": top_match_pct,
+                    "rag_mode": rag_mode,
+                    "engine_mode": engine_mode,
+                    "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                }
+                st.session_state["last_results"] = result_bundle
+
+                # Add to persistent session audit log
+                st.session_state["audit_log"].append({
+                    "timestamp": result_bundle["timestamp"],
+                    "query": query_text[:80] + ("..." if len(query_text) > 80 else ""),
+                    "engine": engine_mode,
+                    "rag_mode": advisory.get("mode", rag_mode),
+                    "retrieval_ms": retrieval_latency,
+                    "generation_ms": generation_latency,
+                    "top_relevance": f"{top_match_pct}%",
+                    "grounded_chunks": len(hits),
+                    "top_source_id": hits[0]["id"] if hits else "None"
+                })
+
+        # Render Active Results
+        if st.session_state.get("last_results"):
+            res = st.session_state["last_results"]
+            hits = res["hits"]
+            advisory = res["advisory"]
+
+            st.markdown("---")
+            st.markdown("#### ⏱️ Real-Time Telemetry & Grounding Metrics")
+            m_col1, m_col2, m_col3, m_col4 = st.columns(4)
+            with m_col1:
+                st.metric("⏱️ Retrieval Latency", f"{res['retrieval_latency_ms']} ms")
+            with m_col2:
+                st.metric("⚡ Generation Latency", f"{res['generation_latency_ms']} ms")
+            with m_col3:
+                st.metric("🎯 Top Match Relevance", f"{res['top_match_pct']}%")
+            with m_col4:
+                st.metric("📚 Grounded Chunks", f"{len(hits)} Sources")
+
+            # Collapsible Grounded Source Chunks
+            st.markdown(f"#### 📌 Retrieved Source Chunks ({len(hits)} Grounded Documents)")
+            if not hits:
+                st.warning("No knowledge base chunks passed the similarity threshold for this query.")
+            else:
+                for idx, chunk in enumerate(hits, 1):
+                    score_pct = f"{chunk.get('score', 0.0) * 100:.1f}%"
+                    badge_style = "badge-cyan" if "OWASP" in chunk.get("framework", "") else ("badge-purple" if "MITRE" in chunk.get("framework", "") else "badge-green")
+                    
+                    with st.expander(
+                        f"#{idx} [{chunk['id']}] {chunk.get('title', '')} — Match: {score_pct} ({chunk.get('source_engine', '')})",
+                        expanded=(idx == 1)
+                    ):
+                        st.markdown(
+                            f"""
+                            <div class="badge-bar">
+                                <span class="cyber-badge {badge_style}">{chunk.get('framework', '')}</span>
+                                <span class="cyber-badge">{chunk.get('category', '')}</span>
+                                <span class="cyber-badge">Mapping: {chunk.get('mapping', '')}</span>
+                                <span class="cyber-badge">Similarity: {score_pct}</span>
+                            </div>
+                            """,
+                            unsafe_allow_html=True
+                        )
+                        st.write(f"**Knowledge Base Content:**\n\n{chunk.get('content', '')}")
+                        if chunk.get("tags"):
+                            st.caption(f"🏷️ Tags: {', '.join(chunk['tags'])}")
+
+            # Synthesized Advisory Output
+            st.markdown("#### 🛡️ Grounded Threat Advisory & Incident Response")
+            if "notice" in advisory:
+                st.info(f"ℹ️ {advisory['notice']}")
+            
+            st.markdown(advisory.get("synthesis_text", "No advisory generated."))
+
+            # One-Click Export Actions
+            st.markdown("---")
+            st.markdown("##### 📥 Export Security Advisory")
+            exp_col1, exp_col2, exp_col3 = st.columns([1, 1, 2])
+
+            with exp_col1:
+                export_md = (
+                    f"# CyberRAG Security Advisory\n\n"
+                    f"**Generated:** {res['timestamp']}\n"
+                    f"**Query:** {res['query']}\n"
+                    f"**RAG Engine:** {advisory.get('mode', 'N/A')} ({advisory.get('model', 'N/A')})\n"
+                    f"**Telemetry:** Retrieval: {res['retrieval_latency_ms']}ms | Generation: {res['generation_latency_ms']}ms\n\n"
+                    f"---\n\n"
+                    f"{advisory.get('synthesis_text', '')}\n"
+                )
+                st.download_button(
+                    "📥 Download Markdown Report",
+                    data=export_md,
+                    file_name="cyber_threat_advisory.md",
+                    mime="text/markdown",
+                    use_container_width=True
+                )
+
+            with exp_col2:
+                export_json = json.dumps({
+                    "metadata": {
+                        "application": "CyberRAG",
+                        "student": "Liav Dahari (Z23815316)",
+                        "course": "COT4930 Generative Cybersecurity",
+                        "timestamp": res["timestamp"]
+                    },
+                    "telemetry": {
+                        "retrieval_latency_ms": res["retrieval_latency_ms"],
+                        "generation_latency_ms": res["generation_latency_ms"],
+                        "top_relevance_pct": res["top_match_pct"],
+                        "grounded_chunk_count": len(hits)
+                    },
+                    "query": res["query"],
+                    "retrieved_sources": hits,
+                    "advisory": advisory
+                }, indent=2)
+                st.download_button(
+                    "📥 Download JSON Advisory",
+                    data=export_json,
+                    file_name="cyber_security_advisory.json",
+                    mime="application/json",
+                    use_container_width=True
+                )
+
+    # --------------------------------------------------------------------------
+    # TAB 2: KNOWLEDGE BASE EXPLORER
+    # --------------------------------------------------------------------------
+    with tab_explorer:
+        st.markdown("### 📚 Pre-Indexed Security Knowledge Base Explorer")
+        st.write("Browse and search authoritative security documents pre-indexed in CyberRAG.")
+
+        exp_col1, exp_col2 = st.columns([1, 2])
+        with exp_col1:
+            filter_fw = st.selectbox(
+                "Filter Framework:",
+                ["All Frameworks"] + FRAMEWORKS,
+                key="explorer_fw_filter"
+            )
+        with exp_col2:
+            search_kb = st.text_input("Search Knowledge Base Chunks:", placeholder="Search title, CWE, tags, or content...", key="explorer_search")
+
+        matching_docs = retriever.documents
+        if filter_fw != "All Frameworks":
+            matching_docs = [d for d in matching_docs if d.get("framework") == filter_fw]
+
+        if search_kb.strip():
+            sk = search_kb.lower()
+            matching_docs = [
+                d for d in matching_docs
+                if sk in d.get("title", "").lower()
+                or sk in d.get("content", "").lower()
+                or sk in d.get("mapping", "").lower()
+                or any(sk in t.lower() for t in d.get("tags", []))
+            ]
+
+        st.caption(f"Showing {len(matching_docs)} of {len(retriever.documents)} documents")
+
+        for d in matching_docs:
+            badge_style = "badge-cyan" if "OWASP" in d.get("framework", "") else ("badge-purple" if "MITRE" in d.get("framework", "") else "badge-green")
+            with st.container():
+                st.markdown(
+                    f"""
+                    <div style="background: rgba(15, 23, 42, 0.6); border: 1px solid #1e293b; border-radius: 8px; padding: 14px; margin-bottom: 12px;">
+                        <div class="badge-bar">
+                            <span class="cyber-badge {badge_style}">{d.get('framework', '')}</span>
+                            <span class="cyber-badge">{d.get('id', '')}</span>
+                            <span class="cyber-badge">CWE/ATT&CK: {d.get('mapping', '')}</span>
+                        </div>
+                        <h4 style="margin: 6px 0; color: #38bdf8 !important;">{d.get('title', '')}</h4>
+                        <p style="color: #cbd5e1; font-size: 0.95rem; line-height: 1.5;">{d.get('content', '')}</p>
+                        <span style="color: #94a3b8; font-size: 0.8rem;">🏷️ Tags: {', '.join(d.get('tags', []))}</span>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+    # --------------------------------------------------------------------------
+    # TAB 3: CUSTOM INGESTION
+    # --------------------------------------------------------------------------
+    with tab_ingest:
+        st.markdown("### 📥 Dynamic Custom Security Documentation Ingestion")
+        st.write("Upload or paste enterprise security documentation, threat bulletins, or incident post-mortems to expand the vector index in real-time.")
+
+        ingest_mode = st.radio("Ingestion Source:", ["Paste Document Text", "Upload Security File (.txt, .md, .json)"], horizontal=True)
+
+        new_doc_id = st.text_input("Document ID:", value=f"CUSTOM-DOC-{len(retriever.documents) + 1}")
+        new_doc_framework = st.selectbox("Assign Framework:", ["Enterprise Internal Policy", "Vendor Threat Advisory", "Zero-Day CVE Brief", "Custom IR Playbook"])
+        new_doc_title = st.text_input("Document Title:", placeholder="e.g. Internal Zero-Trust Authentication Architecture Baseline")
+        new_doc_mapping = st.text_input("Associated Standards Mapping:", placeholder="e.g. CWE-287, NIST PR.AA-01, internal policy REF-402")
+        new_doc_tags = st.text_input("Tags (comma-separated):", placeholder="e.g. zero trust, pam, okta, iam, session")
+
+        new_content = ""
+        if ingest_mode == "Paste Document Text":
+            new_content = st.text_area("Document Content / Security Guidance:", height=150, placeholder="Paste raw security advisory or guidance text here...")
+        else:
+            uploaded_file = st.file_uploader("Upload File:", type=["txt", "md", "json"])
+            if uploaded_file is not None:
+                new_content = uploaded_file.read().decode("utf-8")
+                st.success(f"File '{uploaded_file.name}' loaded successfully ({len(new_content)} characters).")
+
+        if st.button("⚡ Ingest & Re-Index Vector Store", type="primary"):
+            if not new_doc_title.strip() or not new_content.strip():
+                st.error("Title and Content are required to index a document.")
+            else:
+                tags_list = [t.strip() for t in new_doc_tags.split(",") if t.strip()]
+                new_doc = {
+                    "id": new_doc_id.strip(),
+                    "framework": new_doc_framework,
+                    "title": new_doc_title.strip(),
+                    "category": "Custom Ingested Intelligence",
+                    "mapping": new_doc_mapping.strip(),
+                    "tags": tags_list,
+                    "content": new_content.strip()
+                }
+
+                updated_docs = retriever.documents + [new_doc]
+                retriever.reindex(updated_docs)
+                st.success(f"Document [{new_doc_id}] successfully indexed! Total documents in vector index: {len(retriever.documents)}")
+
+    # --------------------------------------------------------------------------
+    # TAB 4: RAG PERFORMANCE & AUDIT LOG
+    # --------------------------------------------------------------------------
+    with tab_audit:
+        st.markdown("### 📊 RAG Performance & Incident Audit Log")
+        st.write("Review real-time execution telemetry, query latencies, grounding relevance, and citation logs for the current session.")
+
+        if not st.session_state["audit_log"]:
+            st.info("No queries have been executed yet in this session. Run a query in Tab 1 to generate telemetry records.")
+        else:
+            st.dataframe(
+                st.session_state["audit_log"],
+                use_container_width=True,
+                column_config={
+                    "timestamp": "Timestamp",
+                    "query": "Threat Query",
+                    "engine": "Vector Store",
+                    "rag_mode": "RAG Mode",
+                    "retrieval_ms": "Retrieval (ms)",
+                    "generation_ms": "Gen (ms)",
+                    "top_relevance": "Top Match",
+                    "grounded_chunks": "Chunks",
+                    "top_source_id": "Top Source ID"
+                }
+            )
+
+            audit_json = json.dumps(st.session_state["audit_log"], indent=2)
+            st.download_button(
+                "📥 Export Telemetry Audit Log (JSON)",
+                data=audit_json,
+                file_name="rag_performance_audit_log.json",
+                mime="application/json"
+            )
+
+
+def main():
+    """Application dispatcher supporting both Streamlit GUI and CLI test modes."""
+    is_streamlit_runtime = False
+    if STREAMLIT_AVAILABLE:
+        try:
+            from streamlit.runtime.scriptrunner import get_script_run_ctx
+            ctx = get_script_run_ctx()
+            if ctx is not None:
+                is_streamlit_runtime = True
+        except Exception:
+            pass
+
+    if is_streamlit_runtime:
+        run_streamlit_app()
+    else:
+        # CLI diagnostic mode
+        stats = get_corpus_statistics()
+        print("=== CyberRAG Knowledge Base Corpus Loaded ===")
+        print(f"Total Pre-indexed Documents: {stats['total_documents']}")
+        for fw, count in stats["frameworks"].items():
+            print(f"  • {fw}: {count} authoritative records")
+
+        print("\n--- Testing Hybrid Retrieval & RAG Synthesis Pipeline ---")
+        retriever = HybridSecurityRetriever()
+
+        test_scenario = PRESET_SCENARIOS["🌐 SSRF Cloud Exfil"]
+        print(f"\n[Scenario]: '{test_scenario}'")
+        hits = retriever.search(test_scenario, top_k=2, engine_mode="hybrid")
+
+        for i, h in enumerate(hits, 1):
+            print(f"  [{i}] {h['id']} — {h['title']} (Score: {h['score']:.4f})")
+
+        advisory = generate_rag_offline(test_scenario, hits)
+        print(f"\nStatus: {advisory['status']} | Latency: {advisory['latency_ms']} ms | Citations: {advisory['citations']}")
+        print("\n[Streamlit Web App Ready] Launch with: streamlit run hw6/app.py")
+
+
+if __name__ == "__main__":
+    main()
+
 
 
 

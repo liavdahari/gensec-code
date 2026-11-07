@@ -72,3 +72,22 @@ AGENT RESPONSE SUMMARY:
 • Enforced explicit citations [Source: ID] across all claims and remediations.
 • Tested end-to-end incident triage pipeline on cloud SSRF / AWS IMDSv2 metadata attack scenario.
 • Prompt 4 successfully logged in hw6/prompts.txt.
+
+
+### PROMPT 5: INTERACTIVE CYBERSECURITY OPERATIONS WEB INTERFACE (STREAMLIT)
+[COT4930 HW6 - Student: Liavdahari, FAU ID: Z23815316]
+Step 5: Implement the complete Streamlit cybersecurity user interface in hw6/app.py:
+1. Cyber-themed dark UI with glow styling, custom CSS, badges, and responsive sidebar controls.
+2. Threat Query & Incident Triage tab with one-click threat scenario presets (SSRF Cloud Exfil, LSASS Dumping, Broken Access Control, Ransomware Response).
+3. Real-time telemetry metrics: Retrieval Latency (ms), Generation Latency (ms), Top Relevance Match (%), Grounded Chunks.
+4. Collapsible citation cards and 1-click export to Markdown Report and JSON Security Advisory.
+Log this action in hw6/prompts.txt under PROMPT 5.
+
+AGENT RESPONSE SUMMARY:
+• Built comprehensive Streamlit web UI in hw6/app.py featuring cyber-themed dark mode styling (#0a0e17), cyan glow accents, and responsive telemetry badges.
+• Integrated responsive sidebar controls allowing dynamic configuration of Reasoning Engines (Offline vs Gemini), Vector Storage (Hybrid, ChromaDB, Lightweight), Top-K chunks, and framework filtering.
+• Implemented Tab 1 (Threat Query & Incident Triage) with 4 one-click threat scenario presets (SSRF Cloud Exfil, LSASS Dumping, Broken Access Control, Ransomware Response).
+• Embedded real-time telemetry metric cards displaying Retrieval Latency, Generation Latency, Top Match Relevance (%), and Grounded Chunks.
+• Added collapsible citation cards detailing chunk metadata and 1-click export to Markdown Report and JSON Security Advisory.
+• Launched active Streamlit server at http://localhost:8501.
+• Prompt 5 successfully logged in hw6/prompts.txt.
